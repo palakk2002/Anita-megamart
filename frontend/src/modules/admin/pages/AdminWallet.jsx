@@ -82,6 +82,9 @@ const AdminWallet = () => {
                         systemFloat: summary.systemFloatCOD || 0,
                         sellerPendingPayouts: summary.sellerPendingPayouts || 0,
                         deliveryPendingPayouts: summary.deliveryPendingPayouts || 0,
+                        totalWelcomeBonusesIssuedCount: summary.totalWelcomeBonusesIssuedCount || 0,
+                        totalWelcomeBonusesIssuedAmount: summary.totalWelcomeBonusesIssuedAmount || 0,
+                        totalWalletAmountRedeemed: summary.totalWalletAmountRedeemed || 0,
                     },
                     transactions: {
                         items: mappedTransactions,
@@ -196,6 +199,24 @@ const AdminWallet = () => {
             color: 'purple',
             bg: 'bg-purple-50',
             iconColor: 'text-purple-500'
+        },
+        {
+            label: 'Welcome Bonuses Issued',
+            value: `${walletData.stats?.totalWelcomeBonusesIssuedCount || 0} (₹${(walletData.stats?.totalWelcomeBonusesIssuedAmount || 0).toLocaleString()})`,
+            description: 'Total welcome bonus claims',
+            icon: Wallet,
+            color: 'emerald',
+            bg: 'bg-emerald-50',
+            iconColor: 'text-emerald-500'
+        },
+        {
+            label: 'Total Wallet Redeemed',
+            value: `₹${(walletData.stats?.totalWalletAmountRedeemed || 0).toLocaleString()}`,
+            description: 'Redeemed by users at checkout',
+            icon: TrendingUp,
+            color: 'amber',
+            bg: 'bg-amber-50',
+            iconColor: 'text-amber-500'
         }
     ];
 

@@ -12,6 +12,8 @@ export const sendLoginOtpSchema = Joi.object({
 export const verifyOtpSchema = Joi.object({
   phone: Joi.string().trim().min(7).max(24).required(),
   otp: Joi.string().trim().pattern(/^\d{4,8}$/).required(),
+  deviceId: Joi.string().trim().max(100).optional(),
+  fingerprint: Joi.object().optional(),
 });
 
 export function validateSchema(schema, payload) {

@@ -1,9 +1,14 @@
 import crypto from "crypto";
+import mongoose from "mongoose";
 import Customer from "../models/customer.js";
+import DeviceClaim from "../models/deviceClaim.js";
+import Transaction from "../models/transaction.js";
 import { sendSmsIndiaHubOtp } from "./smsIndiaHubService.js";
 import { generateOTP, useRealSMS } from "../utils/otp.js";
 import { getRedisClient } from "../config/redis.js";
 import { isValidE164Phone, maskPhone, normalizePhoneNumber } from "../utils/phone.js";
+import { creditWallet } from "./finance/walletService.js";
+import { OWNER_TYPE, LEDGER_TRANSACTION_TYPE } from "../constants/finance.js";
 
 const OTP_EXPIRY_MINUTES = () => parseInt(process.env.OTP_EXPIRY_MINUTES || "5", 10);
 const OTP_RESEND_COOLDOWN_SECONDS = () =>
@@ -202,6 +207,9 @@ export async function verifyCustomerOtpCode({
   rawPhone,
   otp,
   ipAddress = "unknown",
+  deviceId,
+  fingerprint,
+  userAgent,
 }) {
   const phone = normalizeAndValidatePhone(rawPhone);
   const code = String(otp || "").trim();
@@ -266,6 +274,8 @@ export async function verifyCustomerOtpCode({
     throw err;
   }
 
+  const wasVerified = customer.isVerified;
+
   customer.isVerified = true;
   customer.otpHash = undefined;
   customer.otpExpiresAt = undefined;
@@ -283,7 +293,84 @@ export async function verifyCustomerOtpCode({
     ipAddress,
   });
 
+  if (!wasVerified) {
+    await handleWelcomeBonus(customer, { deviceId, fingerprint, ipAddress, userAgent });
+  }
+
   return customer;
+}
+
+async function handleWelcomeBonus(customer, { deviceId, fingerprint, ipAddress, userAgent }) {
+  if (!deviceId) {
+    console.warn(`[WelcomeBonus] No deviceId provided for user ${customer._id}. Welcome bonus skipped to ensure device uniqueness.`);
+    return;
+  }
+
+  const session = await mongoose.startSession();
+  try {
+    session.startTransaction();
+
+    // Check if the device has already claimed the bonus
+    const existingClaim = await DeviceClaim.findOne({ deviceId }).session(session);
+    if (existingClaim) {
+      console.log(`[WelcomeBonus] Device ${deviceId} has already claimed a bonus. User ${customer._id} is ineligible.`);
+      await session.commitTransaction();
+      return;
+    }
+
+    // 1. Credit wallet canonical available balance
+    await creditWallet({
+      ownerType: OWNER_TYPE.CUSTOMER,
+      ownerId: customer._id,
+      amount: 100,
+      bucket: "available",
+      session,
+      ledgerType: LEDGER_TRANSACTION_TYPE.WELCOME_BONUS,
+      ledgerReference: `WELCOME-${customer._id}`,
+      ledgerDescription: "Welcome bonus credited on registration",
+      idempotencyKey: `WELCOME-${customer._id}`,
+      metadata: { reason: "welcome_bonus", deviceId },
+    });
+
+    // 2. Create legacy transaction log
+    await Transaction.create(
+      [
+        {
+          user: customer._id,
+          userModel: "User",
+          type: "Bonus",
+          amount: 100,
+          status: "Settled",
+          reference: `WELCOME-${customer._id}`,
+          date: new Date(),
+          meta: { description: "Welcome bonus credited on registration", deviceId },
+        },
+      ],
+      { session }
+    );
+
+    // 3. Register the device claim
+    await DeviceClaim.create(
+      [
+        {
+          deviceId,
+          user: customer._id,
+          ipAddress,
+          userAgent,
+          fingerprint,
+        },
+      ],
+      { session }
+    );
+
+    await session.commitTransaction();
+    console.log(`[WelcomeBonus] Successfully credited Welcome Bonus to User ${customer._id} for Device ${deviceId}`);
+  } catch (error) {
+    await session.abortTransaction();
+    console.error(`[WelcomeBonus] Error crediting welcome bonus for user ${customer._id}:`, error);
+  } finally {
+    session.endSession();
+  }
 }
 
 export function sanitizeCustomer(customerDoc) {
