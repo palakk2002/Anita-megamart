@@ -70,6 +70,9 @@ export const verifyCustomerOTP = async (req, res) => {
             rawPhone: payload.phone,
             otp: payload.otp,
             ipAddress: req.ip,
+            deviceId: payload.deviceId || req.headers["x-device-id"],
+            fingerprint: payload.fingerprint,
+            userAgent: req.headers["user-agent"],
         });
         const token = generateToken(customer);
 
@@ -148,8 +151,8 @@ export const getCustomerTransactions = async (req, res) => {
 
         const items = transactions.map((t) => ({
             _id: t._id,
-            type: t.type === "Refund" ? "credit" : "debit",
-            title: t.type === "Refund" ? "Refund" : t.type,
+            type: t.amount > 0 ? "credit" : "debit",
+            title: t.type === "Refund" ? "Refund" : (t.type === "Bonus" ? "Welcome Bonus" : t.type),
             amount: Math.abs(t.amount),
             date: t.createdAt,
             reference: t.reference,

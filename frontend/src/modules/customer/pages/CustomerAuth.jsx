@@ -131,7 +131,21 @@ const CustomerAuth = () => {
         }
         setIsLoading(true);
         try {
-            const response = await customerApi.verifyOtp({ phone: formData.phone, otp: formData.otp });
+            let deviceId = localStorage.getItem('deviceId');
+            if (!deviceId) {
+                deviceId = 'dev_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+                localStorage.setItem('deviceId', deviceId);
+            }
+            const response = await customerApi.verifyOtp({
+                phone: formData.phone,
+                otp: formData.otp,
+                deviceId,
+                fingerprint: {
+                    userAgent: navigator.userAgent,
+                    language: navigator.language,
+                    screenResolution: `${window.screen.width}x${window.screen.height}`,
+                }
+            });
             const { token, customer } = response.data.result;
             login({ ...customer, token, role: 'customer' });
             toast.success('Successfully Logged In!');

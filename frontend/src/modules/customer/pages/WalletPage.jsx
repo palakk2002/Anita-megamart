@@ -25,27 +25,14 @@ const WalletPage = () => {
         const fetchData = async () => {
             setLoading(true);
             try {
-                const [profileRes, ordersRes] = await Promise.all([
+                const [profileRes, txRes] = await Promise.all([
                     customerApi.getProfile(),
-                    customerApi.getMyOrders(),
+                    customerApi.getWalletTransactions({ page: 1, limit: 50 }),
                 ]);
                 const profile = profileRes.data?.result ?? profileRes.data?.data ?? profileRes.data;
-                const rawOrders = ordersRes.data?.results ?? ordersRes.data?.result ?? [];
-                const orders = Array.isArray(rawOrders) ? rawOrders : [];
+                const txData = txRes.data?.result ?? txRes.data?.data ?? txRes.data;
                 setBalance(profile?.walletBalance ?? 0);
-                // Only orders purchased using wallet
-                const walletOrders = orders.filter(
-                    (o) => (o.payment?.method || '').toLowerCase() === 'wallet'
-                );
-                const items = walletOrders.map((o) => ({
-                    _id: o._id,
-                    type: 'debit',
-                    title: 'Order Payment',
-                    amount: o.pricing?.total ?? o.payableAmount ?? 0,
-                    date: o.createdAt,
-                    orderId: o.orderId,
-                }));
-                setTransactions(items);
+                setTransactions(Array.isArray(txData?.items) ? txData.items : []);
             } catch (err) {
                 console.error('Wallet fetch error:', err);
                 setBalance(0);
@@ -70,12 +57,23 @@ const WalletPage = () => {
             </div>
 
             <div className="max-w-2xl mx-auto px-4 pt-1 relative z-20 space-y-4">
-                <div className="bg-white rounded-xl border border-slate-200 p-4">
-                    <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Available Balance</p>
-                    <h2 className="text-3xl font-semibold text-slate-900 mt-1">
-                        {loading ? '...' : `₹${(balance || 0).toLocaleString('en-IN')}`}
-                    </h2>
-                    <p className="text-xs text-slate-500 mt-1">Return refunds are credited here</p>
+                <div className="bg-white rounded-xl border border-slate-200 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                        <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Available Balance</p>
+                        <h2 className="text-3xl font-semibold text-slate-900 mt-1">
+                            {loading ? '...' : `₹${(balance || 0).toLocaleString('en-IN')}`}
+                        </h2>
+                        <p className="text-xs text-slate-500 mt-1">Bonus credits and refunds are credited here</p>
+                    </div>
+                    {!loading && (
+                        <div className={`self-start sm:self-center px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider ${
+                            transactions.some(t => t.title === 'Welcome Bonus')
+                                ? 'bg-brand-50 text-brand-700 border border-brand-100'
+                                : 'bg-slate-100 text-slate-500 border border-slate-200'
+                        }`}>
+                            Welcome Bonus: {transactions.some(t => t.title === 'Welcome Bonus') ? 'Credited' : 'Not Credited'}
+                        </div>
+                    )}
                 </div>
 
                 <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">

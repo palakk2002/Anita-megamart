@@ -604,7 +604,7 @@ export async function placeOrderAtomic({
       // Legacy `Transaction` row: kept under both code paths so existing
       // admin dashboards and the `walletLedgerVerifierJob` baseline view
       // are unaffected. The collection deprecation is a later phase.
-      await Transaction.create({
+      await Transaction.create([{
         user: customerId,
         userModel: "User",
         type: "Wallet Payment",
@@ -612,7 +612,7 @@ export async function placeOrderAtomic({
         status: "Settled",
         reference: `WLT-CHOUT-${checkoutGroupId}`,
         meta: { checkoutGroupId }
-      }, { session });
+      }], { session });
     }
 
     const transactionRows = orders.map((order) => ({

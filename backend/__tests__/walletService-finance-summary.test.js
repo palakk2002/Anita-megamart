@@ -5,6 +5,7 @@ const mockWalletCreate = jest.fn();
 
 const mockOrderAggregate = jest.fn();
 const mockPayoutAggregate = jest.fn();
+const mockTransactionAggregate = jest.fn();
 
 jest.unstable_mockModule("../app/models/wallet.js", () => ({
   default: {
@@ -22,6 +23,12 @@ jest.unstable_mockModule("../app/models/order.js", () => ({
 jest.unstable_mockModule("../app/models/payout.js", () => ({
   default: {
     aggregate: mockPayoutAggregate,
+  },
+}));
+
+jest.unstable_mockModule("../app/models/transaction.js", () => ({
+  default: {
+    aggregate: mockTransactionAggregate,
   },
 }));
 
@@ -62,14 +69,22 @@ describe("getAdminFinanceSummary", () => {
       { _id: "DELIVERY_PARTNER", amount: 40 },
     ]);
 
+    mockTransactionAggregate
+      .mockResolvedValueOnce([{ _id: null, count: 5, total: 500 }]) // welcome bonus stats
+      .mockResolvedValueOnce([{ _id: null, total: -300 }]); // wallet payment stats
+
     const summary = await getAdminFinanceSummary();
 
     expect(summary.systemFloatCOD).toBe(375.55);
     expect(summary.totalPlatformEarning).toBe(9999);
     expect(summary.availableBalance).toBe(9779);
     expect(summary.walletAvailableBalance).toBe(999);
+    expect(summary.totalWelcomeBonusesIssuedCount).toBe(5);
+    expect(summary.totalWelcomeBonusesIssuedAmount).toBe(500);
+    expect(summary.totalWalletAmountRedeemed).toBe(300);
     expect(mockOrderAggregate).toHaveBeenCalledTimes(5);
     expect(mockPayoutAggregate).toHaveBeenCalledTimes(1);
+    expect(mockTransactionAggregate).toHaveBeenCalledTimes(2);
   });
 
   it("builds systemFloatCOD pipeline using pending when collected and estimate when not collected", async () => {
@@ -80,6 +95,9 @@ describe("getAdminFinanceSummary", () => {
       .mockResolvedValueOnce([{ _id: null, amount: 0 }])
       .mockResolvedValueOnce([{ _id: null, amount: 0 }]);
     mockPayoutAggregate.mockResolvedValueOnce([]);
+    mockTransactionAggregate
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
 
     await getAdminFinanceSummary();
 

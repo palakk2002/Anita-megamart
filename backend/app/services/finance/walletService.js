@@ -2,6 +2,7 @@ import Wallet from "../../models/wallet.js";
 import Payout from "../../models/payout.js";
 import Order from "../../models/order.js";
 import User from "../../models/customer.js";
+import Transaction from "../../models/transaction.js";
 import {
   LEDGER_DIRECTION,
   ORDER_PAYMENT_STATUS,
@@ -479,6 +480,8 @@ export async function getAdminFinanceSummary() {
     pendingPayouts,
     systemFloatCOD,
     platformGross,
+    bonusStats,
+    redeemedStats,
   ] =
     await Promise.all([
       Order.aggregate([
@@ -568,6 +571,14 @@ export async function getAdminFinanceSummary() {
           },
         },
       ]),
+      Transaction.aggregate([
+        { $match: { type: "Bonus", status: "Settled" } },
+        { $group: { _id: null, count: { $sum: 1 }, total: { $sum: "$amount" } } }
+      ]),
+      Transaction.aggregate([
+        { $match: { type: "Wallet Payment", status: "Settled" } },
+        { $group: { _id: null, total: { $sum: "$amount" } } }
+      ])
     ]);
 
   const sellerPendingPayouts =
@@ -597,6 +608,9 @@ export async function getAdminFinanceSummary() {
     deliveryPendingPayouts: roundCurrency(riderPendingPayouts),
     reconciledOnlineInflows: roundCurrency(onlineCollection[0]?.amount || 0),
     reconciledCODInflows: roundCurrency(codReconciled[0]?.amount || 0),
+    totalWelcomeBonusesIssuedCount: bonusStats[0]?.count || 0,
+    totalWelcomeBonusesIssuedAmount: bonusStats[0]?.total || 0,
+    totalWalletAmountRedeemed: Math.abs(redeemedStats[0]?.total || 0),
   };
 }
 
