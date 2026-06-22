@@ -50,7 +50,24 @@ export function buildMessage(otp) {
     "{#var2#}",
     "{#var3#}",
   ];
-  const replacementOrder = [appName, String(otp), String(minutes)];
+
+  let placeholderCount = 0;
+  genericPlaceholders.forEach((placeholder) => {
+    let temp = msg;
+    let idx = temp.indexOf(placeholder);
+    while (idx !== -1) {
+      placeholderCount += 1;
+      temp = temp.substring(idx + placeholder.length);
+      idx = temp.indexOf(placeholder);
+    }
+  });
+
+  let replacementOrder = [appName, String(otp), String(minutes)];
+  if (placeholderCount === 1) {
+    replacementOrder = [String(otp)];
+  } else if (placeholderCount === 2) {
+    replacementOrder = [String(otp), String(minutes)];
+  }
 
   genericPlaceholders.forEach((placeholder) => {
     let occurrence = 0;
