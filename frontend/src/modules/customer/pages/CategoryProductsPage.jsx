@@ -32,6 +32,7 @@ const CategoryProductsPage = () => {
     const [products, setProducts] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [noServiceData, setNoServiceData] = useState(null);
+    const [isOutOfService, setIsOutOfService] = useState(false);
 
     // Dynamically load no-service Lottie on mount
     useEffect(() => {
@@ -68,6 +69,11 @@ const CategoryProductsPage = () => {
                     : Array.isArray(rawResult)
                     ? rawResult
                     : [];
+
+                const isOutOfServiceMsg = 
+                    prodRes.data.message === "No sellers found in your area" || 
+                    prodRes.data.message === "No products available in your area";
+                setIsOutOfService(isOutOfServiceMsg);
 
                 const formattedProds = dbProds.map(p => ({
                     ...p,
@@ -164,12 +170,25 @@ const CategoryProductsPage = () => {
                                 <div className="w-64 h-64" />
                             )}
                         </div>
-                        <h3 className="text-3xl font-[1000] text-slate-800 tracking-tighter mb-4 uppercase">
-                            Service <span className="text-primary">Unavailable</span>
-                        </h3>
-                        <p className="text-slate-500 font-bold text-sm max-w-[280px] mb-8 leading-relaxed">
-                            {settings?.appName || 'Our service'} is not available in your area yet. We're expanding fast!
-                        </p>
+                        {isOutOfService ? (
+                            <>
+                                <h3 className="text-3xl font-[1000] text-slate-800 tracking-tighter mb-4 uppercase">
+                                    Service <span className="text-primary">Unavailable</span>
+                                </h3>
+                                <p className="text-slate-500 font-bold text-sm max-w-[280px] mb-8 leading-relaxed">
+                                    {settings?.appName || 'Our service'} is not available in your area yet. We're expanding fast!
+                                </p>
+                            </>
+                        ) : (
+                            <>
+                                <h3 className="text-3xl font-[1000] text-slate-800 tracking-tighter mb-4 uppercase">
+                                    Coming <span className="text-primary">Soon!</span>
+                                </h3>
+                                <p className="text-slate-500 font-bold text-sm max-w-[280px] mb-8 leading-relaxed">
+                                    We are stocking up on products for this category. Stay tuned!
+                                </p>
+                            </>
+                        )}
                         <button 
                             onClick={fetchData}
                             className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-800 active:scale-95 transition-all shadow-xl shadow-black/10"

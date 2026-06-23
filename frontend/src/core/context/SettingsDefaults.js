@@ -1,8 +1,8 @@
 /** Default fallbacks when settings are not yet loaded or API fails */
 export const DEFAULT_SETTINGS = {
   appName: "App",
-  supportEmail: "",
-  supportPhone: "",
+  supportEmail: "info@anitamegart.com",
+  supportPhone: "02269621920",
   currencySymbol: "\u20B9",
   currencyCode: "INR",
   timezone: "Asia/Kolkata",
@@ -12,7 +12,7 @@ export const DEFAULT_SETTINGS = {
   secondaryColor: "#64748b",
   companyName: "",
   taxId: "",
-  address: "",
+  address: "Ramkrishna Nagar patna 800020",
   facebook: "",
   twitter: "",
   instagram: "",

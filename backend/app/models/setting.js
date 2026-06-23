@@ -13,11 +13,11 @@ const settingSchema = new mongoose.Schema(
         },
         supportEmail: {
             type: String,
-            default: "support@appzeto.com",
+            default: "info@anitamegart.com",
         },
         supportPhone: {
             type: String,
-            default: "",
+            default: "02269621920",
         },
         currencySymbol: {
             type: String,
@@ -47,7 +47,10 @@ const settingSchema = new mongoose.Schema(
         // Legal
         companyName: String,
         taxId: String,
-        address: String,
+        address: {
+            type: String,
+            default: "Ramkrishna Nagar patna 800020",
+        },
 
         // Social
         facebook: String,
