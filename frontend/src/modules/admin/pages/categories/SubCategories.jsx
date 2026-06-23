@@ -207,7 +207,8 @@ const SubCategories = () => {
       fetchCategories();
     } catch (error) {
       console.error(error);
-      toast.error(editingItem ? "Failed to update" : "Failed to create");
+      const errorMsg = error.response?.data?.message || (editingItem ? "Failed to update" : "Failed to create");
+      toast.error(errorMsg);
     } finally {
       setIsSaving(false);
     }

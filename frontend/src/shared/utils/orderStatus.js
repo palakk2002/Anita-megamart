@@ -56,6 +56,10 @@ export function getLegacyStatusFromOrder(order) {
   if (v >= 2 && order.workflowStatus) {
     const workflowStatus = String(order.workflowStatus).toUpperCase();
 
+    if (String(order.status || "").toLowerCase() === "packed") {
+      return "packed";
+    }
+
     if (workflowStatus === WORKFLOW_STATUS.OUT_FOR_DELIVERY) {
       return "out_for_delivery";
     }

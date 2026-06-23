@@ -63,7 +63,16 @@ export function validate(schema, source = "body") {
     // Mutating req.query / req.params is supported by Express and matches
     // the pre-existing req.body pattern; downstream handlers see the
     // sanitized value transparently.
-    req[source] = value;
+    // In Express 5, req.query, req.params, req.headers are read-only properties (getters),
+    // so we mutate the keys inside the object rather than reassigning the property.
+    if (source === "body") {
+      req.body = value;
+    } else {
+      for (const key of Object.keys(req[source] || {})) {
+        delete req[source][key];
+      }
+      Object.assign(req[source], value);
+    }
     return next();
   };
 }

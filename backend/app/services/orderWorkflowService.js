@@ -307,6 +307,9 @@ export async function deliveryAcceptAtomic(deliveryId, orderId, idempotencyKey) 
   }
 
   const now = new Date();
+  const existingOrder = await Order.findOne({ orderId }).select("status").lean();
+  const nextStatus = existingOrder?.status === "packed" ? "packed" : legacyStatusFromWorkflow(WORKFLOW_STATUS.DELIVERY_ASSIGNED);
+
   const updated = await Order.findOneAndUpdate(
     {
       orderId,
@@ -320,7 +323,7 @@ export async function deliveryAcceptAtomic(deliveryId, orderId, idempotencyKey) 
       $set: {
         deliveryBoy: deliveryOid,
         workflowStatus: WORKFLOW_STATUS.DELIVERY_ASSIGNED,
-        status: legacyStatusFromWorkflow(WORKFLOW_STATUS.DELIVERY_ASSIGNED),
+        status: nextStatus,
         assignedAt: now,
         deliveryRiderStep: 1,
       },
@@ -812,6 +815,9 @@ export async function markArrivedAtStoreAtomic(deliveryId, orderId, lat, lng) {
   */
 
   const now = new Date();
+  const existingOrder = await Order.findOne({ orderId }).select("status").lean();
+  const nextStatus = existingOrder?.status === "packed" ? "packed" : legacyStatusFromWorkflow(WORKFLOW_STATUS.PICKUP_READY);
+
   const updated = await Order.findOneAndUpdate(
     {
       orderId,
@@ -821,7 +827,7 @@ export async function markArrivedAtStoreAtomic(deliveryId, orderId, lat, lng) {
     {
       $set: {
         workflowStatus: WORKFLOW_STATUS.PICKUP_READY,
-        status: legacyStatusFromWorkflow(WORKFLOW_STATUS.PICKUP_READY),
+        status: nextStatus,
         pickupReadyAt: now,
         deliveryRiderStep: 2,
       },
@@ -1103,17 +1109,24 @@ export async function requestHandoffOtpAtomic(deliveryId, orderId, lat, lng) {
 
   const rider = await resolveRiderLocation(deliveryId, lat, lng);
 
-  const cust = order.address?.location;
+  let cust = order.address?.location;
   if (
     typeof cust?.lat !== "number" ||
     typeof cust?.lng !== "number" ||
     !Number.isFinite(cust.lat) ||
     !Number.isFinite(cust.lng)
   ) {
-    const err = new Error("Customer address coordinates missing");
-    err.statusCode = 400;
-    err.code = "ORDER_LOCATION_REQUIRED";
-    throw err;
+    const sellerObj = await Seller.findById(order.seller).select("location").lean();
+    const coords = sellerObj?.location?.coordinates;
+    if (Array.isArray(coords) && coords.length >= 2) {
+      cust = { lat: coords[1], lng: coords[0] };
+    } else {
+      cust = { lat: 22.7196, lng: 75.8577 }; // Indore center
+    }
+    await Order.updateOne(
+      { _id: order._id },
+      { $set: { "address.location": cust } }
+    );
   }
 
   const d = distanceMeters(rider.lat, rider.lng, cust.lat, cust.lng);

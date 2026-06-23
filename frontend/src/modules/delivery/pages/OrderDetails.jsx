@@ -419,6 +419,9 @@ const OrderDetails = () => {
           getCurrentPositionWithCache(resolve, reject, {
             maxCacheAgeMs: 20 * 60 * 1000,
           });
+        }).catch((err) => {
+          console.warn("Geolocation failed, using default fallback location", err);
+          return { lat: 22.7196, lng: 75.8577 };
         });
 
         if (step === 1) {

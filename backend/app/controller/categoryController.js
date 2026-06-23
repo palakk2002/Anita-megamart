@@ -169,6 +169,7 @@ export const createCategory = async (req, res) => {
         categoryData.image = url;
       } catch (err) {
         console.error("Cloudinary upload failed for category:", err);
+        return handleResponse(res, 400, `Image upload failed: ${err.message}`);
       }
     } else if (typeof req.body.image === 'string' && req.body.image.startsWith('http')) {
       categoryData.image = req.body.image;
