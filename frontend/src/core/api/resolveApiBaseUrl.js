@@ -47,8 +47,16 @@ export function resolveApiBaseUrl() {
 
 export function resolveSocketBaseUrl() {
   const explicitSocketUrl = parseEnvUrl(import.meta.env.VITE_SOCKET_URL);
+  let resolvedUrl = "";
   if (explicitSocketUrl) {
-    return explicitSocketUrl.replace(/\/api$/, "");
+    resolvedUrl = explicitSocketUrl.replace(/\/api$/, "");
+  } else {
+    resolvedUrl = resolveApiBaseUrl().replace(/\/api$/, "");
   }
-  return resolveApiBaseUrl().replace(/\/api$/, "");
+
+  // Ensure socket connections use secure websockets (wss://) if the page is loaded over HTTPS
+  if (window.location.protocol === "https:") {
+    resolvedUrl = resolvedUrl.replace(/^http:/, "https:");
+  }
+  return resolvedUrl;
 }

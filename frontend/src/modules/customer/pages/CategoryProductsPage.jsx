@@ -176,8 +176,19 @@ const CategoryProductsPage = () => {
                                     Service <span className="text-primary">Unavailable</span>
                                 </h3>
                                 <p className="text-slate-500 font-bold text-sm max-w-[280px] mb-8 leading-relaxed">
-                                    {settings?.appName || 'Our service'} is not available in your area yet. We're expanding fast!
+                                    {settings?.appName || 'Our service'} is not available in your current location yet. Please select a different location to view products.
                                 </p>
+                                <button 
+                                    onClick={() => {
+                                        // Trigger location selector drawer in header by dispatching custom event or using a global callback, 
+                                        // or simply instruct the user to tap the Location Pill at the top of the Home page.
+                                        navigate('/');
+                                        toast.info("Please tap on the Location selector at the top of the page to choose a serviceable area.");
+                                    }}
+                                    className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-800 active:scale-95 transition-all shadow-xl shadow-black/10"
+                                >
+                                    Change Location
+                                </button>
                             </>
                         ) : (
                             <>
@@ -187,14 +198,14 @@ const CategoryProductsPage = () => {
                                 <p className="text-slate-500 font-bold text-sm max-w-[280px] mb-8 leading-relaxed">
                                     We are stocking up on products for this category. Stay tuned!
                                 </p>
+                                <button 
+                                    onClick={fetchData}
+                                    className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-800 active:scale-95 transition-all shadow-xl shadow-black/10"
+                                >
+                                    Try Refreshing
+                                </button>
                             </>
                         )}
-                        <button 
-                            onClick={fetchData}
-                            className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-800 active:scale-95 transition-all shadow-xl shadow-black/10"
-                        >
-                            Try Refreshing
-                        </button>
                     </div>
                 ) : (
                     <>
