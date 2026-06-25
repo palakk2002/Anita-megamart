@@ -16,6 +16,9 @@ import ChatPage from '../pages/ChatPage';
 import TermsPage from '../pages/TermsPage';
 import PrivacyPage from '../pages/PrivacyPage';
 import AboutPage from '../pages/AboutPage';
+import ReturnPolicyPage from '../pages/ReturnPolicyPage';
+import ShippingPolicyPage from '../pages/ShippingPolicyPage';
+import RefundPolicyPage from '../pages/RefundPolicyPage';
 import EditProfilePage from '../pages/EditProfilePage';
 import OrderDetailPage from '../pages/OrderDetailPage';
 import ProductDetailPage from '../pages/ProductDetailPage';
@@ -44,6 +47,9 @@ const CustomerRoutes = () => {
                             <Route path="terms" element={<TermsPage />} />
                             <Route path="privacy" element={<PrivacyPage />} />
                             <Route path="about" element={<AboutPage />} />
+                            <Route path="return-policy" element={<ReturnPolicyPage />} />
+                            <Route path="shipping-policy" element={<ShippingPolicyPage />} />
+                            <Route path="refund-policy" element={<RefundPolicyPage />} />
                             <Route path="offers" element={<OffersPage />} />
 
                             {/* Protected Customer Routes */}

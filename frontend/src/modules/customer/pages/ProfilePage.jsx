@@ -2,7 +2,8 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
     User, MapPin, Package, CreditCard, Wallet, ChevronRight,
-    LogOut, ShieldCheck, Heart, HelpCircle, Info, Edit2, ChevronLeft, Bell
+    LogOut, ShieldCheck, Heart, HelpCircle, Info, Edit2, ChevronLeft, Bell,
+    ScrollText, RotateCcw, Truck, Coins
 } from 'lucide-react';
 import { useAuth } from '@core/context/AuthContext';
 import { useSettings } from '@core/context/SettingsContext';
@@ -212,6 +213,34 @@ const ProfilePage = () => {
                                 path="/privacy"
                                 color="#a855f7"
                                 bg="rgba(168,85,247,0.08)"
+                            />
+                            <MenuItem
+                                icon={ScrollText}
+                                label="Terms & Conditions"
+                                path="/terms"
+                                color="#f43f5e"
+                                bg="rgba(244,63,94,0.08)"
+                            />
+                            <MenuItem
+                                icon={RotateCcw}
+                                label="Return Policy"
+                                path="/return-policy"
+                                color="#0ea5e9"
+                                bg="rgba(14,165,233,0.08)"
+                            />
+                            <MenuItem
+                                icon={Truck}
+                                label="Shipping Policy"
+                                path="/shipping-policy"
+                                color="#eab308"
+                                bg="rgba(234,179,8,0.08)"
+                            />
+                            <MenuItem
+                                icon={Coins}
+                                label="Refund Policy"
+                                path="/refund-policy"
+                                color="#10b981"
+                                bg="rgba(16,185,129,0.08)"
                             />
                             <MenuItem
                                 icon={Info}
