@@ -44,6 +44,36 @@ services:
         value: "true"
       - key: ENABLE_SIGNED_UPLOADS
         value: "true"
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_SECURE
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: MAIL_FROM_NAME
+        sync: false
+      - key: USE_REAL_EMAIL_OTP
+        sync: false
+      - key: USE_REAL_SMS
+        sync: false
+      - key: SMS_INDIA_HUB_API_KEY
+        sync: false
+      - key: SMS_INDIA_HUB_SENDER_ID
+        sync: false
+      - key: SMS_INDIA_HUB_DLT_TEMPLATE_ID
+        sync: false
+      - key: SMS_INDIA_HUB_GWID
+        sync: false
+      - key: SMS_INDIA_HUB_TEMPLATE_TEXT
+        sync: false
+      - key: SMS_INDIA_HUB_URL
+        sync: false
     autoDeploy: true
 
   # Worker Service - Background Worker

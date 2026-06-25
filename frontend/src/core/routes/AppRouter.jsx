@@ -1,5 +1,5 @@
 import React, { lazy, useMemo, useEffect, Suspense } from 'react';
-import { createBrowserRouter, RouterProvider, Outlet, Navigate } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Outlet, Navigate, useLocation } from 'react-router-dom';
 import ProtectedRoute from '../guards/ProtectedRoute';
 import RoleGuard from '../guards/RoleGuard';
 import { UserRole } from '../constants/roles';
@@ -53,6 +53,25 @@ const DeliveryModule = lazy(() => import('../../modules/delivery/routes/index'))
 
 import CustomerLayout from '../../modules/customer/components/layout/CustomerLayout';
 
+const RootLayout = () => {
+    const location = useLocation();
+
+    // Synchronously sync the active role with the current URL before rendering guards/routes
+    const path = location.pathname;
+    let targetRole = ROLES.CUSTOMER;
+    if (path.startsWith('/seller')) {
+        targetRole = ROLES.SELLER;
+    } else if (path.startsWith('/admin')) {
+        targetRole = ROLES.ADMIN;
+    } else if (path.startsWith('/delivery')) {
+        targetRole = ROLES.DELIVERY;
+    }
+
+    setActiveRole(targetRole);
+
+    return <Outlet />;
+};
+
 const CustomerLayoutWrapper = () => {
     useEffect(() => {
         setActiveRole(ROLES.CUSTOMER);
@@ -82,7 +101,7 @@ const AppRouter = () => {
     const router = useMemo(() => createBrowserRouter([
         {
             path: '/',
-            element: <Outlet />,
+            element: <RootLayout />,
             errorElement: <RootErrorBoundary />,
             children: [
                 {

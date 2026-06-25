@@ -106,16 +106,21 @@ export const signupSeller = async (req, res) => {
 
         if (Array.isArray(documentFiles) && documentFiles.length > 0) {
             for (const file of documentFiles) {
-                try {
-                    const fieldName = file.fieldname;
-                    if (fieldName && REQUIRED_SELLER_DOCUMENT_FIELDS.includes(fieldName)) {
+                const fieldName = file.fieldname;
+                if (fieldName && REQUIRED_SELLER_DOCUMENT_FIELDS.includes(fieldName)) {
+                    try {
                         const url = await uploadToCloudinary(file.buffer, "docs", {
                             mimeType: file.mimetype,
                         });
                         uploadedDocs[fieldName] = url;
+                    } catch (err) {
+                        console.error(`Failed to upload document "${fieldName}" to Cloudinary:`, err);
+                        return handleResponse(
+                            res,
+                            500,
+                            `Failed to upload document "${SELLER_DOCUMENT_FIELDS[fieldName]}": ${err.message}`
+                        );
                     }
-                } catch (err) {
-                    console.error("Failed to upload document to Cloudinary", err);
                 }
             }
         }
