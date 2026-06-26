@@ -78,6 +78,7 @@ export const LEDGER_TRANSACTION_TYPE = {
   // wallet-using customer in permanent drift between the two ledgers.
   WALLET_PAYMENT: "WALLET_PAYMENT",
   WELCOME_BONUS: "WELCOME_BONUS",
+  WALLET_RECHARGE: "WALLET_RECHARGE",
 };
 
 export const PAYOUT_TYPE = {

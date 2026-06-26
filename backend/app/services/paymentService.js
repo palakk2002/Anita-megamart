@@ -5,7 +5,10 @@ import Order from "../models/order.js";
 import CheckoutGroup from "../models/checkoutGroup.js";
 import Payment from "../models/payment.js";
 import PaymentWebhookEvent from "../models/paymentWebhookEvent.js";
-import { ORDER_PAYMENT_STATUS } from "../constants/finance.js";
+import LedgerEntry from "../models/ledgerEntry.js";
+import { ORDER_PAYMENT_STATUS, LEDGER_TRANSACTION_TYPE, OWNER_TYPE } from "../constants/finance.js";
+import Transaction from "../models/transaction.js";
+import { creditWallet } from "./finance/walletService.js";
 import {
   PAYMENT_EVENT_SOURCE,
   PAYMENT_STATUS,
@@ -359,6 +362,39 @@ async function updateCheckoutGroupPaymentStatus(checkoutGroupId, nextStatus) {
 }
 
 async function handleOrderSideEffectsFromPaymentStatus(payment, nextStatus, reason) {
+  if (payment.paymentType === "WALLET_RECHARGE") {
+    if (nextStatus === PAYMENT_STATUS.CAPTURED) {
+      const idempotencyKey = `WLT-RECH-${payment.gatewayOrderId}`;
+      const existingLedger = await LedgerEntry.findOne({ idempotencyKey });
+      if (existingLedger) {
+        console.log(`[WalletRecharge] Payment ${payment.gatewayOrderId} already credited. Skipping duplicate check.`);
+        return;
+      }
+
+      await creditWallet({
+        ownerType: OWNER_TYPE.CUSTOMER,
+        ownerId: payment.customer,
+        amount: payment.amount / 100,
+        bucket: "available",
+        ledgerType: LEDGER_TRANSACTION_TYPE.WALLET_RECHARGE,
+        ledgerReference: payment.gatewayOrderId,
+        ledgerDescription: "Wallet recharge via PhonePe",
+        idempotencyKey,
+      });
+
+      await Transaction.create([{
+        user: payment.customer,
+        userModel: "User",
+        type: "Wallet Recharge",
+        amount: payment.amount / 100,
+        status: "Settled",
+        reference: payment.gatewayOrderId,
+        meta: { paymentId: payment._id }
+      }]);
+    }
+    return;
+  }
+
   const orders = await getRelatedOrdersForPayment(payment);
   if (!orders.length) return;
 
@@ -594,6 +630,12 @@ export async function verifyPhonePePaymentStatus({
   const provider = getActivePaymentProvider();
   const statusResp = await provider.getPaymentStatus({ merchantOrderId });
   const nextStatus = provider.mapStatusToInternal(statusResp.state);
+
+  console.log("verifyPhonePePaymentStatus debugging:", {
+    merchantOrderId,
+    statusResp,
+    nextStatus,
+  });
 
   await transitionPaymentState(payment, {
     nextStatus,

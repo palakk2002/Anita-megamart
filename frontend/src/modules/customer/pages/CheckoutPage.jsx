@@ -761,7 +761,7 @@ const CheckoutPage = () => {
           return;
         }
 
-        if (selectedPayment === "online") {
+        if (selectedPayment === "online" && finalAmountToPay > 0) {
           try {
             const paymentRes = await customerApi.createPaymentOrder({
               orderRef: paymentRef,
@@ -1040,15 +1040,38 @@ const CheckoutPage = () => {
             />
 
             {/* Payment Selector */}
-            <CheckoutPaymentSelector
-              paymentMethods={paymentMethods}
-              selectedPayment={selectedPayment}
-              onSelectPayment={setSelectedPayment}
-              useWallet={useWallet}
-              onToggleWallet={() => setUseWallet((v) => !v)}
-              walletBalance={user?.walletBalance || 0}
-              walletAmountToUse={walletAmountToUse}
-            />
+            {finalAmountToPay > 0 ? (
+              <CheckoutPaymentSelector
+                paymentMethods={paymentMethods}
+                selectedPayment={selectedPayment}
+                onSelectPayment={setSelectedPayment}
+                useWallet={useWallet}
+                onToggleWallet={() => setUseWallet((v) => !v)}
+                walletBalance={user?.walletBalance || 0}
+                walletAmountToUse={walletAmountToUse}
+              />
+            ) : (
+              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Wallet className="text-emerald-600" size={20} />
+                    <span className="font-bold text-slate-800 text-sm">Payment Method</span>
+                  </div>
+                  <span className="text-xs text-emerald-600 font-bold uppercase tracking-wider bg-emerald-50 px-2.5 py-1 rounded-lg">Wallet Applied</span>
+                </div>
+                <div className="p-4 bg-emerald-50/50 border border-emerald-100 rounded-xl flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-emerald-800 text-sm">Wallet Balance Used</p>
+                    <p className="text-xs text-emerald-600/80 mt-0.5">No additional payment required</p>
+                  </div>
+                  <span className="text-lg font-black text-emerald-700">₹{walletAmountToUse}</span>
+                </div>
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-xs text-slate-500">Remaining Wallet Balance</span>
+                  <span className="text-xs font-semibold text-slate-700">₹{((user?.walletBalance || 0) - walletAmountToUse).toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+            )}
 
             {/* Desktop Slide to Pay */}
             <div className="hidden lg:block">

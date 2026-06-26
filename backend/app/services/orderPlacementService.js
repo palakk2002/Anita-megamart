@@ -454,11 +454,6 @@ export async function placeOrderAtomic({
       const entry = pricingSnapshot.sellerBreakdownEntries[index];
       const orderId = await generateUniquePublicOrderId({ session });
       const orderReservation = computeStockReservationWindow(paymentMode);
-      const sellerPendingUntil = shouldStartSellerWorkflow
-        ? new Date(Date.now() + sellerTimeoutMs)
-        : null;
-      const orderExpiresAt = orderReservation.expiresAt || sellerPendingUntil || null;
-
       const sellerLowStockAlerts = await reserveStockForItems({
         items: entry.items,
         sellerId: entry.sellerId,
@@ -482,6 +477,13 @@ export async function placeOrderAtomic({
         ? breakdownWalletAmount
         : (orderGrandTotal / groupGrandTotal) * walletAmount;
 
+      const isFullyPaidByWallet = (orderGrandTotal === 0) || (proportionateWallet >= orderGrandTotal);
+      const startSellerWorkflow = shouldStartSellerWorkflow || isFullyPaidByWallet;
+      const sellerPendingUntil = startSellerWorkflow
+        ? new Date(Date.now() + sellerTimeoutMs)
+        : null;
+      const orderExpiresAt = orderReservation.expiresAt || sellerPendingUntil || null;
+
       // Audit Phase 5 (C-2 + C-4): persist the canonical coupon ref +
       // frozen rule snapshot on every order in the checkout. Per-user
       // usage counts in `couponService.computeOrderDiscount` use
@@ -499,13 +501,14 @@ export async function placeOrderAtomic({
         items: mapOrderItemsForPersistence(entry.items),
         address: normalizedAddress,
         paymentMode,
-        paymentStatus:
-          paymentMode === "ONLINE"
-            ? ORDER_PAYMENT_STATUS.CREATED
-            : ORDER_PAYMENT_STATUS.PENDING_CASH_COLLECTION,
+        paymentStatus: isFullyPaidByWallet
+          ? ORDER_PAYMENT_STATUS.PAID
+          : (paymentMode === "ONLINE"
+              ? ORDER_PAYMENT_STATUS.CREATED
+              : ORDER_PAYMENT_STATUS.PENDING_CASH_COLLECTION),
         payment: {
-          method: paymentMode === "ONLINE" ? "online" : "cash",
-          status: "pending",
+          method: isFullyPaidByWallet ? "wallet" : (paymentMode === "ONLINE" ? "online" : "cash"),
+          status: isFullyPaidByWallet ? "completed" : "pending",
         },
         pricing: {
           ...entry.breakdown, // This might overwrite fields, be careful
@@ -519,7 +522,7 @@ export async function placeOrderAtomic({
         orderStatus: "pending",
         timeSlot: normalizedPayload.timeSlot || "now",
         workflowVersion: 2,
-        workflowStatus: shouldStartSellerWorkflow
+        workflowStatus: startSellerWorkflow
           ? WORKFLOW_STATUS.SELLER_PENDING
           : WORKFLOW_STATUS.CREATED,
         sellerPendingExpiresAt: sellerPendingUntil,
@@ -719,8 +722,8 @@ export async function placeOrderAtomic({
       await storeIdempotencyResult(idempotencyKey, resultPayload, normalizedPayload);
     }
 
-    if (shouldStartSellerWorkflow) {
-      for (const order of orders) {
+    for (const order of orders) {
+      if (order.workflowStatus === WORKFLOW_STATUS.SELLER_PENDING) {
         void afterPlaceOrderV2(order).catch((error) => {
           logger.warn("[placeOrderAtomic] afterPlaceOrderV2 failed", {
             orderId: order.orderId,

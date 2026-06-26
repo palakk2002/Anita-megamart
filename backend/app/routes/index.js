@@ -22,6 +22,7 @@ import mediaRoute from "./mediaRoutes.js";
 import healthRoute from "./healthRoutes.js";
 import metricsRoute from "./metricsRoutes.js";
 import authOtpRoute from "../modules/otp/otp.routes.js";
+import walletRoute from "./walletRoutes.js";
 
 import express from "express";
 
@@ -48,6 +49,7 @@ const setupRoutes = (app) => {
     router.use("/wishlist", wishlistRoute);
     router.use("/orders", orderRoute);
     router.use("/payments", paymentRoute);
+    router.use("/wallet", walletRoute);
     router.use("/maps", mapsRoute);
     router.use("/media", mediaRoute);
     // experienceRoute, offerRoute, couponRoute are mounted at "/" intentionally:

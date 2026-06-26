@@ -54,6 +54,7 @@ const transactionSchema = new mongoose.Schema(
                 "Cash Settlement",
                 "Wallet Payment",
                 "Wallet Refund",
+                "Wallet Recharge",
             ],
             required: true,
         },

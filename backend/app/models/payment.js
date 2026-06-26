@@ -40,7 +40,8 @@ const paymentSchema = new mongoose.Schema(
     order: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Order",
-      required: true,
+      required: false,
+      default: null,
       index: true,
     },
     checkoutGroupId: {
@@ -56,7 +57,7 @@ const paymentSchema = new mongoose.Schema(
     ],
     publicOrderId: {
       type: String,
-      required: true,
+      required: false,
       index: true,
     },
     customer: {
@@ -102,6 +103,12 @@ const paymentSchema = new mongoose.Schema(
       type: String,
       enum: ALL_PAYMENT_STATUSES,
       default: PAYMENT_STATUS.CREATED,
+      index: true,
+    },
+    paymentType: {
+      type: String,
+      enum: ["ORDER", "WALLET_RECHARGE"],
+      default: "ORDER",
       index: true,
     },
     attemptCount: {
