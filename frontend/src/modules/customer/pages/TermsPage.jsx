@@ -62,6 +62,16 @@ const TermsPage = () => {
                         <p>
                             We reserve the right to end or suspend your account at any time for violation of these terms.
                         </p>
+
+                        <div className="border-t border-slate-100 mt-8 pt-6">
+                            <h4 className="text-slate-800 font-bold text-base">Managed By</h4>
+                            <div className="mt-3 text-slate-600 space-y-1.5 text-sm font-medium">
+                                <p><span className="text-slate-800 font-semibold">Client Name:</span> Anita Lohar</p>
+                                <p><span className="text-slate-800 font-semibold">Contact Number:</span> {settings?.supportPhone || '02269621920'}</p>
+                                <p><span className="text-slate-800 font-semibold">Address:</span> {settings?.address || 'Ramkrishna Nagar patna 800020'}</p>
+                                <p><span className="text-slate-800 font-semibold">Email:</span> {settings?.supportEmail || 'anitamegamart@gmail.com'}</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
