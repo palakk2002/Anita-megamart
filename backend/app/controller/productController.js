@@ -125,8 +125,8 @@ function applyMediaFields(productData) {
 
   if (mergedGallery.length > 0) {
     productData.galleryImages = mergedGallery;
-  } else if (!Array.isArray(productData.galleryImages)) {
-    productData.galleryImages = [];
+  } else {
+    delete productData.galleryImages;
   }
 }
 
@@ -582,6 +582,9 @@ export const getSellerProducts = async (req, res) => {
 ================================ */
 export const createProduct = async (req, res) => {
   try {
+    console.log("=== CREATE PRODUCT DEBUG ===");
+    console.log("req.body:", req.body);
+    console.log("req.files:", req.files?.map(f => ({ fieldname: f.fieldname, size: f.size, mimetype: f.mimetype })));
     const role = String(req.user?.role || "").toLowerCase();
     const productData = { ...req.body };
     stripRestrictedModerationFields(productData);
@@ -600,6 +603,7 @@ export const createProduct = async (req, res) => {
       const galleryUrls = [];
       for (const file of files) {
         try {
+          console.log(`Uploading file ${file.fieldname} to Cloudinary...`);
           if (file.fieldname === "mainImage") {
             const url = await uploadToCloudinary(file.buffer, "products", {
               mimeType: file.mimetype,

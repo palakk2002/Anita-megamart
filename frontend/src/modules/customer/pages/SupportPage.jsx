@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { MessageCircle, Phone, Mail, ChevronDown, ChevronUp, FileText, ChevronLeft, PlusCircle, X, Send } from 'lucide-react';
+import { MessageCircle, Phone, Mail, ChevronDown, ChevronUp, FileText, ChevronLeft, PlusCircle, X, Send, MapPin } from 'lucide-react';
 import { useToast } from '@shared/components/ui/Toast';
 import { useSettings } from '@core/context/SettingsContext';
 import { customerApi } from '../services/customerApi';
@@ -17,8 +17,9 @@ const SupportPage = () => {
     const navigate = useNavigate();
     const { showToast } = useToast();
     const { settings } = useSettings();
-    const supportEmail = settings?.supportEmail || '';
-    const supportEmailShort = supportEmail ? (supportEmail.length > 12 ? supportEmail.slice(0, 12) + '...' : supportEmail) : 'support@...';
+    const supportEmail = settings?.supportEmail || 'anitamegamart@gmail.com';
+    const supportPhone = settings?.supportPhone || '02269621920';
+    const supportEmailShort = supportEmail ? (supportEmail.length > 18 ? supportEmail.slice(0, 15) + '...' : supportEmail) : 'support@...';
     const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
     const [ticketLoading, setTicketLoading] = useState(false);
     const [ticketData, setTicketData] = useState({
@@ -98,8 +99,19 @@ const SupportPage = () => {
                         sub="Formal Request"
                         onClick={() => setIsTicketModalOpen(true)}
                     />
-                    <ContactCard icon={Phone} label="Call Us" sub="+91 98765..." />
+                    <ContactCard icon={Phone} label="Call Us" sub={supportPhone} />
                     <ContactCard icon={Mail} label="Email Us" sub={supportEmailShort} />
+                </div>
+
+                {/* Store Address */}
+                <div className="bg-white rounded-xl p-4 border border-slate-200 flex items-start gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 shrink-0">
+                        <MapPin size={20} />
+                    </div>
+                    <div>
+                        <h3 className="font-semibold text-slate-800 text-sm">Store Address</h3>
+                        <p className="text-sm text-slate-600 mt-1">{settings?.address || 'Ramkrishna Nagar patna 800020'}</p>
+                    </div>
                 </div>
 
                 {/* FAQ Section */}

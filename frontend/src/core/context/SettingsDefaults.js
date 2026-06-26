@@ -1,7 +1,7 @@
 /** Default fallbacks when settings are not yet loaded or API fails */
 export const DEFAULT_SETTINGS = {
   appName: "App",
-  supportEmail: "info@anitamegart.com",
+  supportEmail: "anitamegamart@gmail.com",
   supportPhone: "02269621920",
   currencySymbol: "\u20B9",
   currencyCode: "INR",

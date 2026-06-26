@@ -21,7 +21,7 @@ async function run() {
         if (settingsCount === 0) {
             console.log("No settings document found. Creating a new one with new contact details...");
             const newSettings = await Setting.create({
-                supportEmail: "info@anitamegart.com",
+                supportEmail: "anitamegamart@gmail.com",
                 supportPhone: "02269621920",
                 address: "Ramkrishna Nagar patna 800020"
             });
@@ -30,7 +30,7 @@ async function run() {
             console.log("Updating existing settings document(s) with new contact details...");
             const result = await Setting.updateMany({}, {
                 $set: {
-                    supportEmail: "info@anitamegart.com",
+                    supportEmail: "anitamegamart@gmail.com",
                     supportPhone: "02269621920",
                     address: "Ramkrishna Nagar patna 800020"
                 }

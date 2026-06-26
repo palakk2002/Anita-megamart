@@ -13,7 +13,7 @@ const settingSchema = new mongoose.Schema(
         },
         supportEmail: {
             type: String,
-            default: "info@anitamegart.com",
+            default: "anitamegamart@gmail.com",
         },
         supportPhone: {
             type: String,
