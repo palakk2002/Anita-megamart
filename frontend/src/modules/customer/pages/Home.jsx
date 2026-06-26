@@ -381,8 +381,13 @@ const Home = () => {
   const productsById = useMemo(() => { const map = {}; products.forEach((p) => { map[p._id || p.id] = p; }); return map; }, [products]);
   const effectiveQuickCategories = useMemo(() => {
     const ids = heroConfig.categoryIds || [];
-    if (ids.length > 0) { const resolved = ids.map((id) => categoryMap[id]).filter(Boolean).map((c) => ({ id: c._id, name: c.name, image: c.image || "https://cdn-icons-png.flaticon.com/128/2321/2321831.png" })); if (resolved.length > 0) return resolved; }
-    return quickCategories;
+    let resolved = [];
+    if (ids.length > 0) {
+      resolved = ids.map((id) => categoryMap[id]).filter(Boolean).map((c) => ({ id: c._id, name: c.name, image: c.image || "https://cdn-icons-png.flaticon.com/128/2321/2321831.png" }));
+    } else {
+      resolved = quickCategories;
+    }
+    return resolved.filter(c => c.name.toLowerCase().includes('book'));
   }, [heroConfig.categoryIds, categoryMap, quickCategories]);
 
   const sectionsForRenderer = headerSections.length ? headerSections : experienceSections;

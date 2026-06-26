@@ -29,12 +29,14 @@ const CategoriesPage = () => {
                 const formattedGroups = tree
                     .filter((header) => (header.name || '').trim().toLowerCase() !== 'all')
                     .map((header, idx) => {
-                        const categories = (header.children || []).map((cat, cIdx) => ({
-                            id: cat._id,
-                            name: cat.name,
-                            image: cat.image || "https://cdn.grofers.com/cdn-cgi/image/f=auto,fit=scale-down,q=70,metadata=none,w=270/layout-engine/2022-11/Slice-1_9.png",
-                            color: COLORS[(idx + cIdx) % COLORS.length]
-                        }));
+                        const categories = (header.children || [])
+                            .map((cat, cIdx) => ({
+                                id: cat._id,
+                                name: cat.name,
+                                image: cat.image || "https://cdn.grofers.com/cdn-cgi/image/f=auto,fit=scale-down,q=70,metadata=none,w=270/layout-engine/2022-11/Slice-1_9.png",
+                                color: COLORS[(idx + cIdx) % COLORS.length]
+                            }))
+                            .filter(cat => cat.name.toLowerCase().includes('book'));
 
                         return {
                             title: header.name,
