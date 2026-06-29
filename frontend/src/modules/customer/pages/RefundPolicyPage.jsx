@@ -34,34 +34,8 @@ const RefundPolicyPage = () => {
                     </div>
 
                     <div className="prose prose-slate prose-sm max-w-none text-slate-600 space-y-4">
-                        <p>
-                            At {appName}, we strive to ensure that all transactions and order processes are smooth and satisfying. This Refund Policy describes the refund terms and conditions.
-                        </p>
-
-                        <h3 className="text-slate-800 font-bold text-base mt-6">1. Refund Eligibility</h3>
-                        <p>
-                            Refunds are processed for:
-                        </p>
-                        <ul className="list-disc pl-5 space-y-1">
-                            <li>Cancelled orders (before dispatch).</li>
-                            <li>Damaged or defective products at the time of delivery.</li>
-                            <li>Incorrect items delivered (not matching your order).</li>
-                            <li>Missing items from the order that you were charged for.</li>
-                        </ul>
-
-                        <h3 className="text-slate-800 font-bold text-base mt-6">2. Refund Methods</h3>
-                        <p>
-                            Approved refunds can be credited either to your original payment source (bank, card, or wallet) or as store credit in your {appName} Wallet. Wallet refunds are generally instant, while bank/card refunds may take 5–7 business days depending on your financial institution.
-                        </p>
-
-                        <h3 className="text-slate-800 font-bold text-base mt-6">3. Refund Processing</h3>
-                        <p>
-                            Once a refund is approved by our support team, the transaction will be initiated immediately. You can view all refund transactions in the "Order Transactions" page under your Profile.
-                        </p>
-
-                        <h3 className="text-slate-800 font-bold text-base mt-6">4. Contact support</h3>
-                        <p>
-                            If you do not receive your refund within the expected timeframe, please reach out to our Customer Support immediately through the Support page in the app.
+                        <p className="text-base font-medium">
+                            We do not provide any kind of refund and return and cancellation Once the payment was done
                         </p>
                     </div>
                 </div>
