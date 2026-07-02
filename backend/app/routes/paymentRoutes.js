@@ -3,6 +3,8 @@ import {
   createPaymentOrder,
   verifyPaymentStatus,
   handlePhonePeWebhook,
+  createRazorpayOrder,
+  verifyRazorpayPayment,
 } from "../controller/paymentController.js";
 import { verifyToken } from "../middleware/authMiddleware.js";
 import { paymentRouteRateLimiter } from "../middleware/securityMiddlewares.js";
@@ -39,6 +41,28 @@ paymentRoute.post(
   "/webhook/phonepe",
   express.raw({ type: "application/json" }), // SDK needs raw body for verification
   handlePhonePeWebhook,
+);
+
+/**
+ * Initiate a Razorpay payment order for a specific CheckoutGroupId or OrderId.
+ * Auth: Required
+ */
+paymentRoute.post(
+  "/razorpay/create-order",
+  verifyToken,
+  paymentRouteRateLimiter,
+  createRazorpayOrder,
+);
+
+/**
+ * Verify Razorpay payment signature and complete the order.
+ * Auth: Required
+ */
+paymentRoute.post(
+  "/razorpay/verify",
+  verifyToken,
+  paymentRouteRateLimiter,
+  verifyRazorpayPayment,
 );
 
 export default paymentRoute;

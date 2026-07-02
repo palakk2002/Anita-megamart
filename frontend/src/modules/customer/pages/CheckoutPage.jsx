@@ -191,10 +191,10 @@ const CheckoutPage = () => {
       ? []
       : [
           {
-            id: "online",
-            label: "Pay Online",
+            id: "razorpay",
+            label: "Pay Online (Razorpay)",
             icon: CreditCard,
-            sublabel: "UPI / Cards / NetBanking",
+            sublabel: "Cards, UPI, NetBanking",
           },
         ]),
     ...(settings?.codEnabled === false
@@ -661,7 +661,7 @@ const CheckoutPage = () => {
       discountTotal: discountAmount,
       taxTotal: 0,
       tipAmount: selectedTip,
-      paymentMode: selectedPayment === "online" ? "ONLINE" : "COD",
+      paymentMode: (selectedPayment === "razorpay" || selectedPayment === "phonepe" || selectedPayment === "online") ? "ONLINE" : "COD",
       timeSlot: selectedTimeSlot,
     });
 
@@ -724,7 +724,7 @@ const CheckoutPage = () => {
       const taxAmount = pricingPreview?.taxTotal || 0;
       const orderData = {
         address: buildAddressForOrder(),
-        paymentMode: selectedPayment === "online" ? "ONLINE" : "COD",
+        paymentMode: (selectedPayment === "razorpay" || selectedPayment === "phonepe" || selectedPayment === "online") ? "ONLINE" : "COD",
         discountTotal: discountAmount,
         taxTotal: taxAmount,
         tipAmount: selectedTip,
@@ -761,7 +761,106 @@ const CheckoutPage = () => {
           return;
         }
 
-        if (selectedPayment === "online" && finalAmountToPay > 0) {
+        if (selectedPayment === "razorpay" && finalAmountToPay > 0) {
+          try {
+            const paymentRes = await customerApi.createRazorpayOrder({
+              orderRef: paymentRef,
+              orderId: mainOrderId,
+            });
+            if (!paymentRes.data.success) {
+              throw new Error(paymentRes.data.message || "Failed to initiate Razorpay order");
+            }
+            
+            const { key, orderId: rpOrderId, amount, currency } = paymentRes.data.result;
+
+            if (!window.Razorpay) {
+              await new Promise((resolve, reject) => {
+                const script = document.createElement("script");
+                script.src = "https://checkout.razorpay.com/v1/checkout.js";
+                script.async = true;
+                script.onload = resolve;
+                script.onerror = () => reject(new Error("Failed to load Razorpay SDK"));
+                document.body.appendChild(script);
+              });
+            }
+
+            const options = {
+              key: key || import.meta.env.VITE_RAZORPAY_KEY_ID || "",
+              amount: amount,
+              currency: currency || "INR",
+              name: settings?.appName || "Anita Megamart",
+              description: `Order Payment for #${mainOrderId}`,
+              order_id: rpOrderId,
+              handler: async function (response) {
+                try {
+                  setIsPlacingOrder(true);
+                  showToast("Verifying payment...", "info");
+                  
+                  const verifyRes = await customerApi.verifyRazorpayPayment({
+                    razorpay_payment_id: response.razorpay_payment_id,
+                    razorpay_order_id: response.razorpay_order_id,
+                    razorpay_signature: response.razorpay_signature,
+                  });
+
+                  if (verifyRes.data.success) {
+                    clearCart();
+                    showToast("Order placed successfully!", "success");
+                    setOrderId(mainOrderId);
+                    setShowSuccess(true);
+                    
+                    if (postOrderNavigateRef.current) {
+                      clearTimeout(postOrderNavigateRef.current);
+                    }
+                    postOrderNavigateRef.current = setTimeout(() => {
+                      postOrderNavigateRef.current = null;
+                      setIsPlacingOrder(false);
+                      navigate(`/orders/${mainOrderId}`);
+                    }, 3000);
+                  } else {
+                    throw new Error(verifyRes.data.message || "Payment verification failed");
+                  }
+                } catch (err) {
+                  setIsPlacingOrder(false);
+                  showToast(err.message || "Payment verification failed. Please check order details.", "error");
+                  navigate(`/orders/${mainOrderId}`);
+                }
+              },
+              prefill: {
+                name: user?.name || "",
+                email: user?.email || "",
+                contact: user?.phone || "",
+              },
+              theme: {
+                color: "#15803d",
+              },
+              modal: {
+                ondismiss: function () {
+                  setIsPlacingOrder(false);
+                  showToast("Payment cancelled by user.", "warning");
+                },
+              },
+            };
+
+            const rzp = new window.Razorpay(options);
+            rzp.on("payment.failed", function (resp) {
+              setIsPlacingOrder(false);
+              showToast(resp.error?.description || "Payment failed. Please try again.", "error");
+            });
+            rzp.open();
+            return;
+          } catch (payError) {
+            setIsPlacingOrder(false);
+            showToast(
+              payError.message ||
+                "Order created but Razorpay checkout failed. Please pay from order details.",
+              "error"
+            );
+            navigate(`/orders/${mainOrderId}`);
+            return;
+          }
+        }
+
+        if ((selectedPayment === "phonepe" || selectedPayment === "online") && finalAmountToPay > 0) {
           try {
             const paymentRes = await customerApi.createPaymentOrder({
               orderRef: paymentRef,

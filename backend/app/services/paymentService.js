@@ -75,7 +75,7 @@ function extractCheckoutGroupId(orderRef) {
   return null;
 }
 
-async function resolvePaymentTarget(orderRef) {
+export async function resolvePaymentTarget(orderRef) {
   const checkoutGroupId = extractCheckoutGroupId(orderRef);
   if (checkoutGroupId) {
     const checkoutGroup = await CheckoutGroup.findOne({ checkoutGroupId }).lean();
@@ -154,7 +154,7 @@ async function resolvePaymentTarget(orderRef) {
   };
 }
 
-function validatePaymentEligibility(target, userId) {
+export function validatePaymentEligibility(target, userId) {
   if (!target?.orders?.length) {
     const err = new Error("Order not found");
     err.statusCode = 404;
@@ -195,7 +195,7 @@ function validatePaymentEligibility(target, userId) {
   }
 }
 
-function getPayableAmountPaise(target) {
+export function getPayableAmountPaise(target) {
   const amountRupees = target.orders.reduce(
     (sum, order) =>
       sum + Number(order?.paymentBreakdown?.grandTotal ?? order?.pricing?.total ?? 0),
@@ -217,7 +217,7 @@ function paymentStatusToOrderPaymentStatus(status) {
   return ORDER_PAYMENT_STATUS.CREATED;
 }
 
-async function transitionPaymentState(payment, {
+export async function transitionPaymentState(payment, {
   nextStatus,
   source,
   reason = "",
@@ -361,7 +361,7 @@ async function updateCheckoutGroupPaymentStatus(checkoutGroupId, nextStatus) {
   }
 }
 
-async function handleOrderSideEffectsFromPaymentStatus(payment, nextStatus, reason) {
+export async function handleOrderSideEffectsFromPaymentStatus(payment, nextStatus, reason) {
   if (payment.paymentType === "WALLET_RECHARGE") {
     if (nextStatus === PAYMENT_STATUS.CAPTURED) {
       const idempotencyKey = `WLT-RECH-${payment.gatewayOrderId}`;
