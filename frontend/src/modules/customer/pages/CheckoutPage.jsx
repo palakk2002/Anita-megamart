@@ -661,7 +661,7 @@ const CheckoutPage = () => {
       discountTotal: discountAmount,
       taxTotal: 0,
       tipAmount: selectedTip,
-      paymentMode: (selectedPayment === "razorpay" || selectedPayment === "phonepe" || selectedPayment === "online") ? "ONLINE" : "COD",
+      paymentMode: (selectedPayment === "razorpay") ? "ONLINE" : "COD",
       timeSlot: selectedTimeSlot,
     });
 
@@ -724,7 +724,7 @@ const CheckoutPage = () => {
       const taxAmount = pricingPreview?.taxTotal || 0;
       const orderData = {
         address: buildAddressForOrder(),
-        paymentMode: (selectedPayment === "razorpay" || selectedPayment === "phonepe" || selectedPayment === "online") ? "ONLINE" : "COD",
+        paymentMode: (selectedPayment === "razorpay") ? "ONLINE" : "COD",
         discountTotal: discountAmount,
         taxTotal: taxAmount,
         tipAmount: selectedTip,

@@ -15,26 +15,17 @@
  * Rollback is a single env-var flip — no code change.
  */
 
-import { PhonePeAdapter } from "./providers/phonepe.adapter.js";
 import { RazorpayAdapter } from "./providers/razorpay.adapter.js";
 
 let _provider = null;
 let _providerName = null;
 
 function resolveProviderName() {
-  return String(process.env.PAYMENT_PROVIDER || "phonepe").toLowerCase().trim();
+  return "razorpay";
 }
 
 function buildProvider(name) {
-  switch (name) {
-    case "phonepe":
-      return new PhonePeAdapter();
-    case "razorpay":
-      return new RazorpayAdapter();
-    // future: case "stripe":   return new StripeAdapter();
-    default:
-      throw new Error(`Unknown payment provider: ${name}`);
-  }
+  return new RazorpayAdapter();
 }
 
 /**

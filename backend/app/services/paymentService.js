@@ -378,7 +378,7 @@ export async function handleOrderSideEffectsFromPaymentStatus(payment, nextStatu
         bucket: "available",
         ledgerType: LEDGER_TRANSACTION_TYPE.WALLET_RECHARGE,
         ledgerReference: payment.gatewayOrderId,
-        ledgerDescription: "Wallet recharge via PhonePe",
+        ledgerDescription: "Wallet recharge via Razorpay",
         idempotencyKey,
       });
 
