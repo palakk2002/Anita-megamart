@@ -1,6 +1,6 @@
 import handleResponse from "../utils/helper.js";
 import { getOrCreateWallet, creditWallet, getCustomerBalance } from "../services/finance/walletService.js";
-import { getActivePaymentProvider } from "../services/payment/providerRegistry.js";
+import { RazorpayAdapter } from "../services/payment/providers/razorpay.adapter.js";
 import Payment from "../models/payment.js";
 import { PAYMENT_STATUS, PAYMENT_EVENT_SOURCE, PAYMENT_GATEWAY } from "../constants/payment.js";
 import { walletRechargeSchema } from "../validation/walletRechargeValidation.js";
@@ -29,7 +29,7 @@ export const createRechargeOrder = async (req, res) => {
 
     const timestamp = Date.now();
     const merchantOrderId = `RECH-USR-${userId.toString().slice(-6)}-${timestamp}`;
-    const provider = getActivePaymentProvider();
+    const provider = new RazorpayAdapter();
     const redirectUrl = `${process.env.FRONTEND_URL}/wallet?merchantOrderId=${merchantOrderId}`;
 
     const initResult = await provider.initiatePayment({
