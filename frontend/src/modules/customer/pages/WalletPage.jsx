@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowUpRight, ArrowDownLeft, ChevronLeft, Wallet, Plus, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { customerApi } from '../services/customerApi';
+import { useToast } from '@shared/components/ui/Toast';
+import { useSettings } from '@core/context/SettingsContext';
+import { useAuth } from '../../../core/context/AuthContext';
 
 const formatDate = (d) => {
     if (!d) return '';
@@ -17,6 +20,10 @@ const formatDate = (d) => {
 
 const WalletPage = () => {
     const navigate = useNavigate();
+    const { showToast } = useToast();
+    const { settings } = useSettings();
+    const { user } = useAuth();
+
     const [balance, setBalance] = useState(0);
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -80,6 +87,63 @@ const WalletPage = () => {
         }
     };
 
+    const openRazorpayWalletModal = (key, orderId, amount, currency) => {
+        const options = {
+            key: key || import.meta.env.VITE_RAZORPAY_KEY_ID || "",
+            amount: amount,
+            currency: currency || "INR",
+            name: settings?.appName || "Anita Megamart",
+            description: "Wallet Recharge",
+            order_id: orderId,
+            handler: async function (response) {
+                setRechargeLoading(true);
+                showToast("Verifying payment...", "info");
+                try {
+                    const verifyRes = await customerApi.verifyRazorpayPayment({
+                        razorpay_payment_id: response.razorpay_payment_id,
+                        razorpay_order_id: response.razorpay_order_id,
+                        razorpay_signature: response.razorpay_signature,
+                    });
+                    if (verifyRes.data.success) {
+                        setVerifiedAmount(amount / 100);
+                        setVerificationState('success');
+                        showToast("Wallet recharged successfully!", "success");
+                        await fetchData();
+                    } else {
+                        throw new Error(verifyRes.data.message || "Payment verification failed");
+                    }
+                } catch (err) {
+                    console.error("Razorpay verification failed", err);
+                    setVerificationState('failed');
+                    showToast(err.message || "Payment verification failed.", "error");
+                } finally {
+                    setRechargeLoading(false);
+                    setIsRechargeModalOpen(false);
+                }
+            },
+            prefill: {
+                name: user?.name || "",
+                email: user?.email || "",
+                contact: user?.phone || "",
+            },
+            theme: {
+                color: "#10b981",
+            },
+            modal: {
+                ondismiss: function () {
+                    setRechargeLoading(false);
+                    showToast("Payment cancelled by user.", "warning");
+                }
+            }
+        };
+        const rzp = new window.Razorpay(options);
+        rzp.on("payment.failed", function (resp) {
+            setRechargeLoading(false);
+            showToast(resp.error?.description || "Payment failed. Please try again.", "error");
+        });
+        rzp.open();
+    };
+
     const handleRecharge = async () => {
         const amt = Number(rechargeAmount);
         if (!amt || isNaN(amt) || amt < 1) {
@@ -89,11 +153,38 @@ const WalletPage = () => {
         setRechargeLoading(true);
         try {
             const res = await customerApi.createWalletRechargeOrder({ amount: amt });
-            const redirectUrl = res.data?.result?.redirectUrl || res.data?.data?.redirectUrl;
-            if (redirectUrl) {
-                window.location.href = redirectUrl;
+            const resultData = res.data?.result || res.data?.data || res.data;
+            const gatewayName = resultData?.gatewayName || resultData?.payment?.gatewayName;
+
+            if (gatewayName === 'RAZORPAY') {
+                const key = resultData?.key || import.meta.env.VITE_RAZORPAY_KEY_ID || "";
+                const payment = resultData?.payment;
+                const orderId = payment?.gatewayOrderId;
+                const amount = payment?.amount;
+                const currency = payment?.currency || "INR";
+
+                if (!window.Razorpay) {
+                    const script = document.createElement("script");
+                    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+                    script.async = true;
+                    script.onload = () => {
+                        openRazorpayWalletModal(key, orderId, amount, currency);
+                    };
+                    script.onerror = () => {
+                        showToast("Failed to load Razorpay SDK", "error");
+                        setRechargeLoading(false);
+                    };
+                    document.body.appendChild(script);
+                } else {
+                    openRazorpayWalletModal(key, orderId, amount, currency);
+                }
             } else {
-                alert(res.data?.message || 'Failed to initiate recharge payment');
+                const redirectUrl = resultData?.redirectUrl;
+                if (redirectUrl) {
+                    window.location.href = redirectUrl;
+                } else {
+                    alert(res.data?.message || 'Failed to initiate recharge payment');
+                }
             }
         } catch (err) {
             console.error('Recharge error:', err);

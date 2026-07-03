@@ -2,7 +2,7 @@ import handleResponse from "../utils/helper.js";
 import { getOrCreateWallet, creditWallet, getCustomerBalance } from "../services/finance/walletService.js";
 import { getActivePaymentProvider } from "../services/payment/providerRegistry.js";
 import Payment from "../models/payment.js";
-import { PAYMENT_STATUS, PAYMENT_EVENT_SOURCE } from "../constants/payment.js";
+import { PAYMENT_STATUS, PAYMENT_EVENT_SOURCE, PAYMENT_GATEWAY } from "../constants/payment.js";
 import { walletRechargeSchema } from "../validation/walletRechargeValidation.js";
 import { validateSchema } from "../validation/paymentValidation.js";
 import { LEDGER_TRANSACTION_TYPE, OWNER_TYPE } from "../constants/finance.js";
@@ -38,15 +38,18 @@ export const createRechargeOrder = async (req, res) => {
       redirectUrl,
     });
 
+    const isRazorpay = provider.providerName === PAYMENT_GATEWAY.RAZORPAY;
+    const gatewayOrderId = isRazorpay ? initResult.gatewayResponse.id : merchantOrderId;
+
     const payment = await Payment.create({
       customer: userId,
       gatewayName: provider.providerName,
-      gatewayOrderId: merchantOrderId,
+      gatewayOrderId,
       amount: amountNum * 100,
       currency: "INR",
       status: PAYMENT_STATUS.PENDING,
       paymentType: "WALLET_RECHARGE",
-      rawGatewayResponse: {
+      rawGatewayResponse: isRazorpay ? initResult.gatewayResponse : {
         redirectUrl: initResult.redirectUrl,
         merchantOrderId,
         amount: amountNum * 100,
@@ -65,6 +68,8 @@ export const createRechargeOrder = async (req, res) => {
       payment,
       redirectUrl: initResult.redirectUrl,
       merchantOrderId,
+      gatewayName: provider.providerName,
+      key: isRazorpay ? process.env.RAZORPAY_KEY_ID : undefined,
     });
   } catch (error) {
     console.error("createRechargeOrder failed:", error);
