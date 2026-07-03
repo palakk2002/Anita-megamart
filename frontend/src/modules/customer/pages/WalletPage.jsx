@@ -221,7 +221,7 @@ const WalletPage = () => {
                             className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition-all shadow-sm hover:shadow flex items-center gap-2"
                         >
                             <Plus size={16} />
-                            Add Money
+                            add money via phonepay
                         </button>
                         {!loading && (
                             <div className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider ${
