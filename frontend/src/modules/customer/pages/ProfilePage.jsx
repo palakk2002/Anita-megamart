@@ -222,6 +222,20 @@ const ProfilePage = () => {
                                 bg="rgba(244,63,94,0.08)"
                             />
                             <MenuItem
+                                icon={RotateCcw}
+                                label="Return Policy"
+                                path="/return-policy"
+                                color="#0ea5e9"
+                                bg="rgba(14,165,233,0.08)"
+                            />
+                            <MenuItem
+                                icon={Truck}
+                                label="Shipping Policy"
+                                path="/shipping-policy"
+                                color="#eab308"
+                                bg="rgba(234,179,8,0.08)"
+                            />
+                            <MenuItem
                                 icon={Coins}
                                 label="Refund Policy"
                                 path="/refund-policy"

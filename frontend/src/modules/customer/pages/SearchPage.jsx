@@ -335,7 +335,7 @@ const SearchPage = () => {
                             </section>
                         )}
 
-                        {/* 2. Lowest Price Ever Section (Hidden for now)
+                        {/* 2. Lowest Price Ever Section */}
                         <section>
                             <div className="flex justify-between items-center mb-5">
                                 <h2 className="text-xl font-black text-slate-800 tracking-tight">Lowest Price Ever!</h2>
@@ -359,7 +359,6 @@ const SearchPage = () => {
                                 ))}
                             </div>
                         </section>
-                        */}
                     </>
                 )}
             </div>

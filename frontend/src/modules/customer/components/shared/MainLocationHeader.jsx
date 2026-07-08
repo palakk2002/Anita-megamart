@@ -42,7 +42,7 @@ function CategoryNavColumn({
   headerFontColor,
   headerIconColor,
 }) {
-  const iconColor = headerIconColor || "#111111";
+  const iconColor = "#000000";
   const colRef = useRef(null);
   const labelRef = useRef(null);
   const [lr, setLr] = useState({ l: 22, r: 78 });
@@ -91,7 +91,7 @@ function CategoryNavColumn({
             sx={{
               fontSize: { xs: 20, md: 24 },
               color: iconColor,
-              opacity: isActive ? 1 : 0.62,
+              opacity: 1,
               transition: "opacity 0.2s, transform 0.2s",
             }}
           />
@@ -101,7 +101,7 @@ function CategoryNavColumn({
             alt={cat.name}
             loading="lazy"
             className="h-5 w-5 object-contain md:h-6 md:w-6"
-            style={{ opacity: isActive ? 1 : 0.62 }}
+            style={{ opacity: 1 }}
           />
         )}
       </div>
@@ -113,8 +113,8 @@ function CategoryNavColumn({
             isActive ? "font-black" : "font-semibold",
           )}
           style={{
-            color: isActive ? iconColor : (headerFontColor || "#111111"),
-            opacity: isActive ? 1 : 0.68,
+            color: iconColor,
+            opacity: 1,
           }}>
           {cat.name}
         </span>

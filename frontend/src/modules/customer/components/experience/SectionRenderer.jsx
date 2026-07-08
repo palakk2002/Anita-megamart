@@ -90,10 +90,13 @@ const SectionRenderer = ({ sections = [], productsById = {}, categoriesById = {}
           const ids = section.config?.categories?.categoryIds || [];
           const rows = section.config?.categories?.rows || 1;
           const visibleCount = rows * 4;
-          const allItems = ids
+          let allItems = ids
             .map((id) => categoriesById[id])
-            .filter(Boolean)
-            .slice(0, visibleCount);
+            .filter(Boolean);
+          if (allItems.length === 0) {
+            allItems = Object.values(categoriesById);
+          }
+          allItems = allItems.slice(0, visibleCount);
           const visibleItems = allItems.slice(
             0,
             resolveVisibleCount(sectionKey, allItems.length)

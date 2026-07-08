@@ -59,9 +59,7 @@ export function buildHeaderGradient(baseHeaderColor) {
 
 /** Solid fill for floating cart pill: header mid tone, slightly darker. */
 export function buildMiniCartColor(baseHeaderColor) {
-  const base = baseHeaderColor || DEFAULT_BASE;
-  const mid = shiftHex(base, 20);
-  return shiftHex(mid, -26);
+  return baseHeaderColor || DEFAULT_BASE;
 }
 
 /** Gradient for floating mini cart pill (same palette as header, horizontal). */

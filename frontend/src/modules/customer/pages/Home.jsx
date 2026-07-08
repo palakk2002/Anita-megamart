@@ -139,7 +139,7 @@ const ALL_CATEGORY = {
   name: "All",
   icon: HomeIcon,
   theme: DEFAULT_CATEGORY_THEME,
-  headerColor: "#0e7490",
+  headerColor: "#37a72f",
   headerFontColor: "#111111",
   headerIconColor: "#111111",
   banner: {
@@ -168,6 +168,19 @@ const getHomePageDataCacheKey = (location) => {
 
 const getCachedHomePageData = (location) =>
   homePageDataCache.get(getHomePageDataCacheKey(location)) || null;
+
+const DB_HEADER_COLORS = {
+  "All": "#37a72f",
+  "Fresh Vegetables": "#16a34a",
+  "Electronic": "#7c3aed",
+  "50% Off": "#dc2626",
+  "School Time": "#2563eb",
+  "Kids": "#06b6d4",
+  "Home": "#d97706",
+  "Beauty": "#db2777",
+  "Fashion": "#e11d48",
+  "Grocery": "#ea580c"
+};
 
 const Home = () => {
   const { scrollY } = useScroll();
@@ -229,7 +242,12 @@ const Home = () => {
     setProducts(data.products || []);
     setExperienceSections(data.experienceSections || []);
     setOfferSections(data.offerSections || []);
-    if (data.heroConfig) setHeroConfig(data.heroConfig);
+    if (persist) {
+      homePageDataCache.set(cacheKey, data);
+      if (data.heroConfig) {
+        heroConfigMemoryCache[data.activeCategory?._id === "all" ? "__home__" : data.activeCategory?._id] = data.heroConfig;
+      }
+    }
     setActiveCategory((prev) => {
       const parsed = getJSON(STORAGE_KEYS.EXPERIENCE_RETURN, null, { storage: "session" });
       if (parsed?.headerId) {
@@ -239,7 +257,6 @@ const Home = () => {
       if (!prev || prev._id === "all") return data.activeCategory || data.categories?.[0] || ALL_CATEGORY;
       return (data.categories || []).find((cat) => cat._id === prev._id) || data.activeCategory || prev;
     });
-    if (persist && cacheKey) homePageDataCache.set(cacheKey, data);
   };
 
   const fetchData = async ({ forceRefresh = false } = {}) => {
@@ -282,14 +299,18 @@ const Home = () => {
         const dbCats = catRes.data.results || catRes.data.result || [];
         const catMap = {};
         const subMap = {};
-        dbCats.forEach((c) => { if (c.type === "category") catMap[c._id] = c; else if (c.type === "subcategory") subMap[c._id] = c; });
-        nextHomeData.categoryMap = catMap;
+         dbCats.forEach((c) => {
+           if (c.type === "category" || c.type === "header") catMap[c._id] = c;
+           else if (c.type === "subcategory") subMap[c._id] = c;
+         });
+         nextHomeData.categoryMap = catMap;
         nextHomeData.subcategoryMap = subMap;
         const formattedHeaders = dbCats.filter((cat) => cat.type === "header").map((cat) => {
           const catName = cat.name;
           const meta = CATEGORY_METADATA[catName] || CATEGORY_METADATA[catName.toUpperCase()] || { icon: Sparkles, theme: DEFAULT_CATEGORY_THEME, banner: { title: catName.toUpperCase(), subtitle: "TOP PICKS", floatingElements: "sparkles" } };
           const IconComp = (cat.iconId && ICON_COMPONENTS[cat.iconId]) || meta.icon || Sparkles;
-          return { ...cat, id: cat._id, icon: IconComp, theme: meta.theme, banner: { ...meta.banner, textColor: "text-white" } };
+          const customColor = DB_HEADER_COLORS[catName] || cat.headerColor || "#FF1E1E";
+          return { ...cat, id: cat._id, headerColor: customColor, icon: IconComp, theme: meta.theme, banner: { ...meta.banner, textColor: "text-white" } };
         });
         nextHomeData.formattedHeaders = formattedHeaders;
         const allHeaderFromAdmin = formattedHeaders.find((h) => (h.slug?.toLowerCase() === "all") || (h.name?.toLowerCase() === "all"));
@@ -387,7 +408,7 @@ const Home = () => {
     } else {
       resolved = quickCategories;
     }
-    return resolved.filter(c => c.name.toLowerCase().includes('book'));
+    return resolved;
   }, [heroConfig.categoryIds, categoryMap, quickCategories]);
 
   const sectionsForRenderer = headerSections.length ? headerSections : experienceSections;
@@ -442,7 +463,7 @@ const Home = () => {
 
           <PromoMarquee />
           <QuickCategorySlider categories={effectiveQuickCategories} onCategoryClick={(id) => navigate(`/category/${id}`)} />
-          {/* <LowestPriceSection products={products} onSeeAll={() => navigate("/category/all")} /> */}
+          <LowestPriceSection products={products} onSeeAll={() => navigate("/category/all")} />
           <OfferSections sections={offerSections} noServiceData={noServiceData} />
 
           {sectionsForRenderer.length > 0 && (
