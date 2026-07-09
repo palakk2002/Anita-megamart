@@ -288,8 +288,8 @@ export const LocationProvider = ({ children }) => {
     refreshAddresses();
   }, [refreshAddresses]);
 
-  // On mount: only restore from cache. Do NOT auto-fetch – browsers block the
-  // location prompt unless it's triggered by a user gesture (e.g. tap).
+  // On mount: restore from cache first. Auto-fetch (if permission is pre-granted)
+  // is handled by a separate effect below.
   useEffect(() => {
     const parsed = getJSON(STORAGE_KEY, null);
     const addressName = parsed?.address || parsed?.name;
@@ -315,6 +315,37 @@ export const LocationProvider = ({ children }) => {
       });
     }
     // Live fetch happens only when user taps location pill or "Use current location"
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-detect location on app open when permission is already granted.
+  // This gives a Swiggy/Zomato-like experience where the location bar
+  // updates automatically without requiring the user to tap anything.
+  useEffect(() => {
+    const tryAutoFetch = async () => {
+      // Flutter native app — always auto-fetch (native wrapper handles permissions)
+      if (window.Flutter) {
+        fetchAndCacheLocation();
+        return;
+      }
+
+      // Browser — only auto-fetch if geolocation permission is already "granted".
+      // If state is "prompt" we must NOT call getCurrentPosition here because
+      // browsers will silently ignore it (no user gesture) or show a prompt the
+      // user didn't ask for. If "denied", there's nothing to do.
+      if (navigator.permissions && navigator.permissions.query) {
+        try {
+          const status = await navigator.permissions.query({ name: 'geolocation' });
+          if (status.state === 'granted') {
+            fetchAndCacheLocation();
+          }
+        } catch {
+          // Permissions API doesn't support geolocation query in this browser — skip
+        }
+      }
+    };
+
+    tryAutoFetch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
