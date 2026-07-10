@@ -257,13 +257,15 @@ const ProductCard = React.memo(
                 )}
               />
             </div>
-            <div
-              className={cn(
-                "bg-brand-50 text-brand-600 font-bold rounded px-1.5 py-0 tracking-wide",
-                compact ? "text-[8px]" : "text-[8px] sm:text-[9px]",
-              )}>
-              {product.weight || "1 unit"}
-            </div>
+            {product.weight && (
+              <div
+                className={cn(
+                  "bg-brand-50 text-brand-600 font-bold rounded px-1.5 py-0 tracking-wide",
+                  compact ? "text-[8px]" : "text-[8px] sm:text-[9px]",
+                )}>
+                {product.weight}
+              </div>
+            )}
           </div>
 
           <div className={cn(compact ? "h-8" : "h-8 sm:h-9")}>

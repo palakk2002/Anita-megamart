@@ -295,7 +295,7 @@ const ProductDetailPage = () => {
                     <div className="grid grid-cols-3 gap-4">
                         <div className="bg-white p-4 rounded-2xl border border-slate-100 text-center shadow-sm">
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Weight</p>
-                            <p className="text-sm font-black text-slate-800">{product.weight || '1 unit'}</p>
+                            <p className="text-sm font-black text-slate-800">{product.weight || 'N/A'}</p>
                         </div>
                         <div className="bg-white p-4 rounded-2xl border border-slate-100 text-center shadow-sm">
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Stock</p>

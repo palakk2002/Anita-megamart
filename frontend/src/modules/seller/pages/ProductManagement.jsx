@@ -28,7 +28,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { sellerApi } from "../services/sellerApi";
 import { toast } from "sonner";
+import { compressImage } from "@/core/utils/imageCompression";
 import Pagination from "@shared/components/ui/Pagination";
+import { invalidateCache } from "@core/api/dedupe";
 
 const ProductManagement = () => {
   const navigate = useNavigate();
@@ -332,10 +334,13 @@ const ProductManagement = () => {
       data.append("variants", JSON.stringify(formData.variants));
 
       if (formData.mainImageFile) {
-        data.append("mainImage", formData.mainImageFile);
+        const compressedMain = await compressImage(formData.mainImageFile);
+        data.append("mainImage", compressedMain);
       }
       if (formData.galleryFiles && formData.galleryFiles.length > 0) {
-        formData.galleryFiles.forEach((file) => data.append("galleryImages", file));
+        const compressedGalleryPromises = formData.galleryFiles.map(file => compressImage(file));
+        const compressedGalleryFiles = await Promise.all(compressedGalleryPromises);
+        compressedGalleryFiles.forEach((file) => data.append("galleryImages", file));
       }
 
       if (editingItem) {
@@ -354,6 +359,13 @@ const ProductManagement = () => {
         } else {
           toast.success(response?.data?.message || "Product created successfully");
         }
+      }
+
+      try {
+        invalidateCache("/products");
+        sessionStorage.setItem("clear_home_cache", "true");
+      } catch (err) {
+        console.error("Cache invalidation failed:", err);
       }
 
       setIsProductModalOpen(false);

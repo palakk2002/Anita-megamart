@@ -21,6 +21,18 @@ import {
 } from "../../utils/money.js";
 import { getOrCreateFinanceSettings } from "./financeSettingsService.js";
 
+function parseWeightToGramsOrUnits(name) {
+  if (!name) return { value: 1, unit: "unit" };
+  const cleanName = name.toLowerCase().trim();
+  const match = cleanName.match(/^([\d.]+)\s*(kg|g|pack|packet|pc|pcs|unit|ltr|ml)?/);
+  if (!match) return { value: 1, unit: "unit" };
+  const value = parseFloat(match[1]) || 1;
+  const unit = match[2] || "unit";
+  if (unit === "kg") return { value: value * 1000, unit: "g" };
+  if (unit === "ltr") return { value: value * 1000, unit: "ml" };
+  return { value, unit };
+}
+
 function toObjectIdString(value) {
   if (!value) return "";
   if (typeof value === "object" && value._id) return String(value._id);
@@ -357,10 +369,39 @@ export async function hydrateOrderItems(
     }
 
     const quantity = normalizeLineQuantity(item.quantity);
+    let price = product.price;
+    let salePrice = product.salePrice || 0;
+
+    if (resolvedVariant) {
+      const variants = Array.isArray(product.variants) ? product.variants : [];
+      const baseVariant = variants[0];
+      const vPrice = Number(resolvedVariant.price || 0);
+      const vSalePrice = Number(resolvedVariant.salePrice || 0);
+
+      price = vPrice || product.price;
+      salePrice = vSalePrice || product.salePrice || 0;
+
+      if (baseVariant && resolvedVariant.sku !== baseVariant.sku) {
+        if (price === Number(product.price) || price === 0) {
+          const baseW = parseWeightToGramsOrUnits(baseVariant.name);
+          const selW = parseWeightToGramsOrUnits(resolvedVariant.name);
+          if (baseW.unit === selW.unit && baseW.value > 0) {
+            const ratio = selW.value / baseW.value;
+            const basePrice = Number(baseVariant.price || product.price || 0);
+            const baseSalePrice = Number(baseVariant.salePrice || product.salePrice || 0);
+            price = Math.round(basePrice * ratio);
+            if (baseSalePrice > 0) {
+              salePrice = Math.round(baseSalePrice * ratio);
+            } else {
+              salePrice = 0;
+            }
+          }
+        }
+      }
+    }
+
     const serverUnitPrice = normalizeLinePrice(
-      resolvedVariant
-        ? resolvedVariant.salePrice || resolvedVariant.price || product.salePrice || product.price
-        : product.salePrice || product.price,
+      salePrice > 0 && salePrice < price ? salePrice : price
     );
     const inferredUnitPrice = enforceServerPricing
       ? serverUnitPrice

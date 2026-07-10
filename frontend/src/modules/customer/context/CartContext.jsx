@@ -44,6 +44,18 @@ export const CartProvider = ({ children }) => {
     });
   };
 
+  const parseWeightToGramsOrUnits = (name) => {
+    if (!name) return { value: 1, unit: "unit" };
+    const cleanName = name.toLowerCase().trim();
+    const match = cleanName.match(/^([\d.]+)\s*(kg|g|pack|packet|pc|pcs|unit|ltr|ml)?/);
+    if (!match) return { value: 1, unit: "unit" };
+    const value = parseFloat(match[1]) || 1;
+    const unit = match[2] || "unit";
+    if (unit === "kg") return { value: value * 1000, unit: "g" };
+    if (unit === "ltr") return { value: value * 1000, unit: "ml" };
+    return { value, unit };
+  };
+
   const resolveVariantPricing = (product, variantSku = "") => {
     const normalizedKey = String(variantSku || "").trim();
     if (!normalizedKey) {
@@ -60,9 +72,33 @@ export const CartProvider = ({ children }) => {
       const name = String(v?.name || "").trim();
       return (sku && sku === normalizedKey) || (!sku && name === normalizedKey) || name === normalizedKey;
     });
+
+    const baseVariant = variants[0];
+    let price = Number(hit?.price || product?.price || 0);
+    let salePrice = Number(hit?.salePrice || 0);
+
+    if (baseVariant && hit && baseVariant.sku !== hit.sku) {
+      const basePrice = Number(baseVariant.price || product?.price || 0);
+      const baseSalePrice = Number(baseVariant.salePrice || product?.salePrice || 0);
+      
+      if (price === Number(product?.price || 0) || price === 0) {
+        const baseW = parseWeightToGramsOrUnits(baseVariant.name);
+        const selW = parseWeightToGramsOrUnits(hit.name);
+        if (baseW.unit === selW.unit && baseW.value > 0) {
+          const ratio = selW.value / baseW.value;
+          price = Math.round(basePrice * ratio);
+          if (baseSalePrice > 0) {
+            salePrice = Math.round(baseSalePrice * ratio);
+          } else {
+            salePrice = 0;
+          }
+        }
+      }
+    }
+
     return {
-      price: Number(hit?.price || product?.price || 0),
-      salePrice: Number(hit?.salePrice || 0),
+      price,
+      salePrice,
       variantName: String(hit?.name || "").trim(),
     };
   };

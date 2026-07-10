@@ -13,6 +13,68 @@ import { customerApi } from '../../services/customerApi';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 
+const parseWeightToGramsOrUnits = (name) => {
+    if (!name) return { value: 1, unit: 'unit' };
+    const cleanName = name.toLowerCase().trim();
+    const match = cleanName.match(/^([\d.]+)\s*(kg|g|pack|packet|pc|pcs|unit|ltr|ml)?/);
+    if (!match) return { value: 1, unit: 'unit' };
+    const value = parseFloat(match[1]) || 1;
+    const unit = match[2] || 'unit';
+    if (unit === 'kg') return { value: value * 1000, unit: 'g' };
+    if (unit === 'ltr') return { value: value * 1000, unit: 'ml' };
+    return { value, unit };
+};
+
+const getCalculatedVariantPrice = (product, variant) => {
+    if (!product || !variant) return 0;
+    const variantPrice = Number(variant.salePrice || variant.price || 0);
+    const baseProductPrice = Number(product.price || 0);
+    
+    if (variantPrice > 0 && variantPrice !== baseProductPrice) {
+        return variantPrice;
+    }
+    
+    const baseVariant = product.variants?.[0];
+    if (!baseVariant || baseVariant.sku === variant.sku) {
+        return variantPrice || baseProductPrice;
+    }
+    
+    const baseWeight = parseWeightToGramsOrUnits(baseVariant.name);
+    const selectedWeight = parseWeightToGramsOrUnits(variant.name);
+    
+    if (baseWeight.unit === selectedWeight.unit && baseWeight.value > 0) {
+        const ratio = selectedWeight.value / baseWeight.value;
+        const basePrice = Number(baseVariant.salePrice || baseVariant.price || baseProductPrice);
+        return Math.round(basePrice * ratio);
+    }
+    return variantPrice || baseProductPrice;
+};
+
+const getCalculatedVariantOriginalPrice = (product, variant) => {
+    if (!product || !variant) return 0;
+    const variantOriginalPrice = Number(variant.price || 0);
+    const baseProductOriginalPrice = Number(product.originalPrice || product.price || 0);
+    
+    if (variantOriginalPrice > 0 && variantOriginalPrice !== baseProductOriginalPrice) {
+        return variantOriginalPrice;
+    }
+    
+    const baseVariant = product.variants?.[0];
+    if (!baseVariant || baseVariant.sku === variant.sku) {
+        return variantOriginalPrice || baseProductOriginalPrice;
+    }
+    
+    const baseWeight = parseWeightToGramsOrUnits(baseVariant.name);
+    const selectedWeight = parseWeightToGramsOrUnits(variant.name);
+    
+    if (baseWeight.unit === selectedWeight.unit && baseWeight.value > 0) {
+        const ratio = selectedWeight.value / baseWeight.value;
+        const baseOriginalPrice = Number(baseVariant.price || baseProductOriginalPrice);
+        return Math.round(baseOriginalPrice * ratio);
+    }
+    return variantOriginalPrice || baseProductOriginalPrice;
+};
+
 const ProductDetailSheet = () => {
     const { selectedProduct, isOpen, closeProduct } = useProductDetail();
     const { cart, cartCount, addToCart, updateQuantity, removeFromCart } = useCart();
@@ -140,6 +202,9 @@ const ProductDetailSheet = () => {
         : null;
     const quantity = cartItem ? cartItem.quantity : 0;
     const isWishlisted = selectedProduct ? isInWishlist(selectedProduct.id) : false;
+    const activePrice = selectedProduct ? getCalculatedVariantPrice(selectedProduct, selectedVariant) : 0;
+    const activeOriginalPrice = selectedProduct ? getCalculatedVariantOriginalPrice(selectedProduct, selectedVariant) : 0;
+    const hasDiscount = activeOriginalPrice > activePrice;
 
     useEffect(() => {
         if (isOpen) {
@@ -983,21 +1048,18 @@ const ProductDetailSheet = () => {
                             <div className="flex flex-col gap-3">
                                 <div className="flex items-center justify-between gap-4">
                                     <div className="flex flex-col min-w-[80px]">
-                                        {((selectedVariant?.salePrice && selectedVariant.salePrice < selectedVariant.price) || 
-                                           (!selectedVariant && selectedProduct.originalPrice > selectedProduct.price)) && (
+                                        {hasDiscount && (
                                             <div className="flex items-center gap-2">
                                                 <span className="text-sm font-medium text-gray-400 line-through decoration-gray-400/50">
-                                                    ₹{selectedVariant?.price || selectedProduct.originalPrice}
+                                                    ₹{activeOriginalPrice}
                                                 </span>
                                                 <span className="bg-red-50 text-red-500 text-[10px] font-black px-1.5 py-0.5 rounded leading-none">
-                                                    {selectedVariant
-                                                        ? Math.round(((selectedVariant.price - selectedVariant.salePrice) / selectedVariant.price) * 100)
-                                                        : Math.round(((selectedProduct.originalPrice - selectedProduct.price) / selectedProduct.originalPrice) * 100)}% OFF
+                                                    {Math.round(((activeOriginalPrice - activePrice) / activeOriginalPrice) * 100)}% OFF
                                                 </span>
                                             </div>
                                         )}
                                         <div className="text-2xl font-black text-[#1A1A1A] leading-none mt-1">
-                                            ₹{selectedVariant?.salePrice || selectedVariant?.price || selectedProduct.price}
+                                            ₹{activePrice}
                                         </div>
                                     </div>
 

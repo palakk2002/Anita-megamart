@@ -550,7 +550,7 @@ const MainLocationHeader = ({
                 overflowY: "hidden",
               }}
               className="relative flex items-end md:justify-center gap-0 overflow-x-auto no-scrollbar -mx-2 px-2 md:mx-0 md:px-0 z-10 snap-x pt-1 min-h-[68px] md:min-h-[76px] pb-0.5">
-              {categories.slice(0, 10).map((cat) => {
+              {categories.map((cat) => {
                 const isActive = activeCategory?.id === cat.id;
                 return (
                   <CategoryNavColumn

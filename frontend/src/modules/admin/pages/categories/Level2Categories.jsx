@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { adminApi } from "../../services/adminApi";
 import { toast } from "sonner";
+import { compressImage } from "@/core/utils/imageCompression";
 
 const makeSlug = (value) =>
   String(value || "")
@@ -160,7 +161,8 @@ const Level2Categories = () => {
       });
 
       if (imageFile) {
-        data.append("image", imageFile);
+        const compressedFile = await compressImage(imageFile);
+        data.append("image", compressedFile);
       } else if (previewUrl && !previewUrl.startsWith("blob:")) {
         data.append("image", previewUrl);
       }

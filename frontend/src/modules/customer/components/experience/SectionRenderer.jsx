@@ -48,21 +48,21 @@ const SectionRenderer = ({ sections = [], productsById = {}, categoriesById = {}
   const navigate = useNavigate();
   const [sectionVisibleCounts, setSectionVisibleCounts] = React.useState({});
 
-  const loadMoreForSection = React.useCallback((sectionKey, totalCount) => {
+  const loadMoreForSection = React.useCallback((sectionKey, totalCount, increment = LAZY_CHUNK_SIZE) => {
     if (!sectionKey || totalCount <= 0) return;
     setSectionVisibleCounts((prev) => {
-      const current = prev[sectionKey] ?? LAZY_CHUNK_SIZE;
+      const current = prev[sectionKey] ?? increment;
       if (current >= totalCount) return prev;
       return {
         ...prev,
-        [sectionKey]: Math.min(totalCount, current + LAZY_CHUNK_SIZE),
+        [sectionKey]: Math.min(totalCount, current + increment),
       };
     });
   }, []);
 
   const resolveVisibleCount = React.useCallback(
-    (sectionKey, totalCount) => {
-      const current = sectionVisibleCounts[sectionKey] ?? LAZY_CHUNK_SIZE;
+    (sectionKey, totalCount, initialCount = LAZY_CHUNK_SIZE) => {
+      const current = sectionVisibleCounts[sectionKey] ?? initialCount;
       return Math.min(totalCount, current);
     },
     [sectionVisibleCounts]
@@ -94,12 +94,11 @@ const SectionRenderer = ({ sections = [], productsById = {}, categoriesById = {}
             .map((id) => categoriesById[id])
             .filter(Boolean);
           if (allItems.length === 0) {
-            allItems = Object.values(categoriesById);
+            allItems = Object.values(categoriesById).filter((cat) => cat.type === "category");
           }
-          allItems = allItems.slice(0, visibleCount);
           const visibleItems = allItems.slice(
             0,
-            resolveVisibleCount(sectionKey, allItems.length)
+            resolveVisibleCount(sectionKey, allItems.length, visibleCount)
           );
           const hasMore = visibleItems.length < allItems.length;
 
@@ -153,7 +152,7 @@ const SectionRenderer = ({ sections = [], productsById = {}, categoriesById = {}
               </div>
               <LazyLoadTrigger
                 enabled={hasMore}
-                onVisible={() => loadMoreForSection(sectionKey, allItems.length)}
+                onVisible={() => loadMoreForSection(sectionKey, allItems.length, visibleCount)}
               />
             </div>
           );

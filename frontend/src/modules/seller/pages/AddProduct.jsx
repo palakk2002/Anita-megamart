@@ -18,7 +18,9 @@ import {
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { compressImage } from "@/core/utils/imageCompression";
 import { sellerApi } from "../services/sellerApi";
+import { invalidateCache } from "@core/api/dedupe";
 
 
 const AddProduct = () => {
@@ -162,11 +164,14 @@ const AddProduct = () => {
 
       // Images
       if (formData.mainImageFile) {
-        data.append("mainImage", formData.mainImageFile);
+        const compressedMain = await compressImage(formData.mainImageFile);
+        data.append("mainImage", compressedMain);
       }
 
       if (formData.galleryFiles && formData.galleryFiles.length > 0) {
-        formData.galleryFiles.forEach(file => {
+        const compressedGalleryPromises = formData.galleryFiles.map(file => compressImage(file));
+        const compressedGalleryFiles = await Promise.all(compressedGalleryPromises);
+        compressedGalleryFiles.forEach(file => {
           data.append("galleryImages", file);
         });
       }
@@ -175,6 +180,12 @@ const AddProduct = () => {
       data.append("variants", JSON.stringify(formData.variants));
 
       const response = await sellerApi.createProduct(data);
+      try {
+        invalidateCache("/products");
+        sessionStorage.setItem("clear_home_cache", "true");
+      } catch (err) {
+        console.error("Cache invalidation failed:", err);
+      }
       const approvalStatus = response?.data?.result?.approvalStatus;
       if (approvalStatus === "pending") {
         toast.success("Product submitted for admin approval");

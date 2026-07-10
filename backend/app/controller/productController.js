@@ -597,31 +597,34 @@ export const createProduct = async (req, res) => {
       productData.sellerId = req.user.id;
     }
 
-    // Handle multipart files (mainImage and galleryImages)
+    // Handle multipart files (mainImage and galleryImages) in parallel
     const files = req.files || [];
     if (files.length > 0) {
-      const galleryUrls = [];
-      for (const file of files) {
+      const uploadPromises = files.map(async (file) => {
         try {
           console.log(`Uploading file ${file.fieldname} to Cloudinary...`);
-          if (file.fieldname === "mainImage") {
-            const url = await uploadToCloudinary(file.buffer, "products", {
-              mimeType: file.mimetype,
-              resourceType: "image",
-            });
-            productData.mainImage = url;
-          } else if (file.fieldname === "galleryImages") {
-            const url = await uploadToCloudinary(file.buffer, "products", {
-              mimeType: file.mimetype,
-              resourceType: "image",
-            });
-            galleryUrls.push(url);
-          }
+          const url = await uploadToCloudinary(file.buffer, "products", {
+            mimeType: file.mimetype,
+            resourceType: "image",
+          });
+          return { fieldname: file.fieldname, url };
         } catch (err) {
           logger.error("Cloudinary upload failed", {
             scope: "createProduct",
             error: err,
           });
+          return null;
+        }
+      });
+
+      const uploadResults = await Promise.all(uploadPromises);
+      const galleryUrls = [];
+      for (const result of uploadResults) {
+        if (!result) continue;
+        if (result.fieldname === "mainImage") {
+          productData.mainImage = result.url;
+        } else if (result.fieldname === "galleryImages") {
+          galleryUrls.push(result.url);
         }
       }
       if (galleryUrls.length > 0) {
@@ -758,30 +761,33 @@ export const updateProduct = async (req, res) => {
       delete productData.sellerId;
     }
 
-    // Handle multipart files (mainImage and galleryImages)
+    // Handle multipart files (mainImage and galleryImages) in parallel
     const files = req.files || [];
     if (files.length > 0) {
-      const galleryUrls = [];
-      for (const file of files) {
+      const uploadPromises = files.map(async (file) => {
         try {
-          if (file.fieldname === "mainImage") {
-            const url = await uploadToCloudinary(file.buffer, "products", {
-              mimeType: file.mimetype,
-              resourceType: "image",
-            });
-            productData.mainImage = url;
-          } else if (file.fieldname === "galleryImages") {
-            const url = await uploadToCloudinary(file.buffer, "products", {
-              mimeType: file.mimetype,
-              resourceType: "image",
-            });
-            galleryUrls.push(url);
-          }
+          const url = await uploadToCloudinary(file.buffer, "products", {
+            mimeType: file.mimetype,
+            resourceType: "image",
+          });
+          return { fieldname: file.fieldname, url };
         } catch (err) {
           logger.error("Cloudinary upload failed during update", {
             scope: "updateProduct",
             error: err,
           });
+          return null;
+        }
+      });
+
+      const uploadResults = await Promise.all(uploadPromises);
+      const galleryUrls = [];
+      for (const result of uploadResults) {
+        if (!result) continue;
+        if (result.fieldname === "mainImage") {
+          productData.mainImage = result.url;
+        } else if (result.fieldname === "galleryImages") {
+          galleryUrls.push(result.url);
         }
       }
       if (galleryUrls.length > 0) {

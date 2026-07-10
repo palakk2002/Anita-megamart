@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { adminApi } from "../../services/adminApi";
 import { toast } from "sonner";
+import { compressImage } from "@/core/utils/imageCompression";
 
 const makeSlug = (value) =>
   String(value || "")
@@ -188,7 +189,8 @@ const SubCategories = () => {
       });
 
       if (imageFile) {
-        data.append("image", imageFile);
+        const compressedFile = await compressImage(imageFile);
+        data.append("image", compressedFile);
       } else if (previewUrl && !previewUrl.startsWith("blob:")) {
         // If no new file is chosen, but we have a preview URL that isn't a local blob,
         // it means we have an existing image URL or a string.
