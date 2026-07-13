@@ -317,7 +317,7 @@ const Home = () => {
         const mergedAllCategory = allHeaderFromAdmin ? { ...ALL_CATEGORY, headerColor: allHeaderFromAdmin.headerColor || ALL_CATEGORY.headerColor, headerFontColor: allHeaderFromAdmin.headerFontColor || ALL_CATEGORY.headerFontColor, headerIconColor: allHeaderFromAdmin.headerIconColor || ALL_CATEGORY.headerIconColor, icon: allHeaderFromAdmin.icon || ALL_CATEGORY.icon } : ALL_CATEGORY;
         nextHomeData.categories = [mergedAllCategory, ...formattedHeaders.filter((h) => !((h.slug?.toLowerCase() === "all") || (h.name?.toLowerCase() === "all")))];
         nextHomeData.activeCategory = mergedAllCategory;
-        nextHomeData.quickCategories = dbCats.filter((cat) => cat.type === "category").map((cat) => ({ id: cat._id, name: cat.name, image: cat.image || "https://cdn-icons-png.flaticon.com/128/2321/2321831.png" }));
+        nextHomeData.quickCategories = dbCats.filter((cat) => cat.type === "category").map((cat) => ({ id: cat._id, name: cat.name, parentId: cat.parentId?._id || cat.parentId, image: cat.image || "https://cdn-icons-png.flaticon.com/128/2321/2321831.png" }));
       }
       if (prodRes.data.success) {
         const rawResult = prodRes.data.result;
@@ -410,17 +410,45 @@ const Home = () => {
 
   const productsById = useMemo(() => { const map = {}; products.forEach((p) => { map[p._id || p.id] = p; }); return map; }, [products]);
   const effectiveQuickCategories = useMemo(() => {
-    const ids = heroConfig.categoryIds || [];
+    const isHeader = activeCategory && activeCategory._id !== "all";
+    const isCorrectConfig = isHeader
+      ? (heroConfig && String(heroConfig.headerId || '') === String(activeCategory?._id || ''))
+      : true;
+
+    const ids = isCorrectConfig ? (heroConfig.categoryIds || []) : [];
     let resolved = [];
     if (ids.length > 0) {
-      resolved = ids.map((id) => categoryMap[id]).filter(Boolean).map((c) => ({ id: c._id, name: c.name, image: c.image || "https://cdn-icons-png.flaticon.com/128/2321/2321831.png" }));
+      resolved = ids.map((id) => categoryMap[id]).filter(Boolean).map((c) => ({ id: c._id || c.id, name: c.name, parentId: c.parentId?._id || c.parentId, image: c.image || "https://cdn-icons-png.flaticon.com/128/2321/2321831.png" }));
     } else {
       resolved = quickCategories;
     }
+    if (isHeader) {
+      return resolved.filter((c) => {
+        const pId = c.parentId;
+        const parentIdStr = typeof pId === 'object' ? pId?._id : pId;
+        return String(parentIdStr) === String(activeCategory._id);
+      });
+    }
     return resolved;
-  }, [heroConfig.categoryIds, categoryMap, quickCategories]);
+  }, [heroConfig, categoryMap, quickCategories, activeCategory]);
 
-  const sectionsForRenderer = headerSections.length ? headerSections : experienceSections;
+  const effectiveLowestPriceProducts = useMemo(() => {
+    if (!activeCategory || activeCategory._id === "all") {
+      return products;
+    }
+    return products.filter((p) => {
+      const pHeaderId = p.headerId?._id || p.headerId;
+      return String(pHeaderId) === String(activeCategory._id);
+    });
+  }, [products, activeCategory]);
+
+  const sectionsForRenderer = useMemo(() => {
+    const rawSections = headerSections.length ? headerSections : experienceSections;
+    if (activeCategory && activeCategory._id !== "all") {
+      return rawSections.filter((s) => s.displayType !== "categories");
+    }
+    return rawSections;
+  }, [headerSections, experienceSections, activeCategory]);
   const isMobile = useMemo(() => isMobileOrWebView(), []);
   const opacity = useTransform(scrollY, (heroVisible && !isMobile) ? [0, 300] : [0, 0], [1, 0.6]);
   const y = useTransform(scrollY, (heroVisible && !isMobile) ? [0, 300] : [0, 0], [0, 80]);
@@ -472,7 +500,7 @@ const Home = () => {
 
           <PromoMarquee />
           <QuickCategorySlider categories={effectiveQuickCategories} onCategoryClick={(id) => navigate(`/category/${id}`)} />
-          <LowestPriceSection products={products} onSeeAll={() => navigate("/category/all")} />
+          <LowestPriceSection products={effectiveLowestPriceProducts} onSeeAll={() => navigate("/category/all")} />
           <OfferSections sections={offerSections} noServiceData={noServiceData} />
 
           {sectionsForRenderer.length > 0 && (
