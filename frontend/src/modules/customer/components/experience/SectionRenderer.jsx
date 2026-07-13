@@ -47,6 +47,20 @@ const LazyLoadTrigger = ({ enabled, onVisible }) => {
 const SectionRenderer = ({ sections = [], productsById = {}, categoriesById = {}, subcategoriesById = {} }) => {
   const navigate = useNavigate();
   const [sectionVisibleCounts, setSectionVisibleCounts] = React.useState({});
+  const [colsPerHover, setColsPerHover] = React.useState(4);
+
+  React.useEffect(() => {
+    const updateCols = () => {
+      const w = window.innerWidth;
+      if (w >= 1280) setColsPerHover(10);
+      else if (w >= 1024) setColsPerHover(8);
+      else if (w >= 768) setColsPerHover(6);
+      else setColsPerHover(4);
+    };
+    updateCols();
+    window.addEventListener("resize", updateCols);
+    return () => window.removeEventListener("resize", updateCols);
+  }, []);
 
   const loadMoreForSection = React.useCallback((sectionKey, totalCount, increment = LAZY_CHUNK_SIZE) => {
     if (!sectionKey || totalCount <= 0) return;
@@ -89,7 +103,7 @@ const SectionRenderer = ({ sections = [], productsById = {}, categoriesById = {}
         if (section.displayType === "categories") {
           const ids = section.config?.categories?.categoryIds || [];
           const rows = section.config?.categories?.rows || 1;
-          const visibleCount = rows * 4;
+          const visibleCount = rows * colsPerHover;
           let allItems = ids
             .map((id) => categoriesById[id])
             .filter(Boolean);
@@ -121,7 +135,7 @@ const SectionRenderer = ({ sections = [], productsById = {}, categoriesById = {}
                 </div>
               )}
               <div className="rounded-3xl bg-white shadow-[0_18px_45px_rgba(15,23,42,0.06)] border border-slate-100 px-3.5 py-3">
-                <div className="grid grid-cols-4 gap-3">
+                <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-3">
                   {visibleItems.map((cat) => (
                     <button
                       key={cat._id}
@@ -161,7 +175,7 @@ const SectionRenderer = ({ sections = [], productsById = {}, categoriesById = {}
         if (section.displayType === "subcategories") {
           const ids = section.config?.subcategories?.subcategoryIds || [];
           const rows = section.config?.subcategories?.rows || 1;
-          const visibleCount = rows * 4;
+          const visibleCount = rows * colsPerHover;
           const allItems = ids
             .map((id) => subcategoriesById[id])
             .filter(Boolean)
@@ -190,7 +204,7 @@ const SectionRenderer = ({ sections = [], productsById = {}, categoriesById = {}
                 </div>
               )}
               <div className="rounded-3xl bg-white shadow-[0_18px_45px_rgba(15,23,42,0.06)] border border-slate-100 px-3.5 py-3">
-                <div className="grid grid-cols-4 gap-3">
+                <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-3">
                   {visibleItems.map((cat) => (
                     <button
                       key={cat._id}

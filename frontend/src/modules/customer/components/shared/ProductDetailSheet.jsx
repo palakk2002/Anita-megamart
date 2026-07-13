@@ -530,15 +530,15 @@ const ProductDetailSheet = () => {
                                                 <div className="flex flex-col gap-1">
                                                     <div className="flex items-baseline gap-2">
                                                         <span className="text-[28px] lg:text-[32px] font-[800] text-primary tracking-tight leading-none">
-                                                            ₹{selectedProduct.price}
+                                                            ₹{activePrice * (quantity || 1)}
                                                         </span>
-                                                        {selectedProduct.originalPrice > selectedProduct.price && (
-                                                            <span className="text-[14px] text-gray-400 line-through font-[600]">₹{selectedProduct.originalPrice}</span>
+                                                        {hasDiscount && (
+                                                            <span className="text-[14px] text-gray-400 line-through font-[600]">₹{activeOriginalPrice * (quantity || 1)}</span>
                                                         )}
                                                     </div>
-                                                    {selectedProduct.originalPrice > selectedProduct.price && (
+                                                    {hasDiscount && (
                                                         <span className="inline-flex w-fit items-center text-[10px] font-[800] text-red-600 bg-red-50 border border-red-100 px-2 py-0.5 rounded-md uppercase tracking-wide">
-                                                            {Math.round(((selectedProduct.originalPrice - selectedProduct.price) / selectedProduct.originalPrice) * 100)}% off
+                                                            {Math.round(((activeOriginalPrice - activePrice) / activeOriginalPrice) * 100)}% off
                                                         </span>
                                                     )}
                                                 </div>
@@ -1051,7 +1051,7 @@ const ProductDetailSheet = () => {
                                         {hasDiscount && (
                                             <div className="flex items-center gap-2">
                                                 <span className="text-sm font-medium text-gray-400 line-through decoration-gray-400/50">
-                                                    ₹{activeOriginalPrice}
+                                                    ₹{activeOriginalPrice * (quantity || 1)}
                                                 </span>
                                                 <span className="bg-red-50 text-red-500 text-[10px] font-black px-1.5 py-0.5 rounded leading-none">
                                                     {Math.round(((activeOriginalPrice - activePrice) / activeOriginalPrice) * 100)}% OFF
@@ -1059,7 +1059,7 @@ const ProductDetailSheet = () => {
                                             </div>
                                         )}
                                         <div className="text-2xl font-black text-[#1A1A1A] leading-none mt-1">
-                                            ₹{activePrice}
+                                            ₹{activePrice * (quantity || 1)}
                                         </div>
                                     </div>
 
