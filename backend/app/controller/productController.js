@@ -577,6 +577,45 @@ export const getSellerProducts = async (req, res) => {
   }
 };
 
+async function generateUniqueSlug(text, excludeProductId = null) {
+  const baseSlug = slugify(text);
+  let slug = baseSlug;
+  let count = 0;
+  while (true) {
+    const query = { slug };
+    if (excludeProductId) {
+      query._id = { $ne: excludeProductId };
+    }
+    const exists = await Product.findOne(query);
+    if (!exists) {
+      break;
+    }
+    count++;
+    slug = `${baseSlug}-${count}`;
+  }
+  return slug;
+}
+
+async function generateUniqueSku(text, index = 1, excludeProductId = null) {
+  let baseSku = String(text || "").includes("-") ? text : makeProductSku(text, index);
+  baseSku = String(baseSku).trim();
+  let sku = baseSku;
+  let count = 0;
+  while (true) {
+    const query = { sku };
+    if (excludeProductId) {
+      query._id = { $ne: excludeProductId };
+    }
+    const exists = await Product.findOne(query);
+    if (!exists) {
+      break;
+    }
+    count++;
+    sku = `${baseSku}-${count}`;
+  }
+  return sku;
+}
+
 /* ===============================
    CREATE PRODUCT
 ================================ */
@@ -657,9 +696,9 @@ export const createProduct = async (req, res) => {
     
     // Auto-generate slug
     if (!productData.slug || productData.slug.trim() === "") {
-      productData.slug = slugify(productData.name);
+      productData.slug = await generateUniqueSlug(productData.name);
     } else {
-      productData.slug = slugify(productData.slug);
+      productData.slug = await generateUniqueSlug(productData.slug);
     }
 
     productData.description =
@@ -669,7 +708,9 @@ export const createProduct = async (req, res) => {
 
     // Auto-generate product SKU if missing
     if (!productData.sku || String(productData.sku).trim() === "") {
-      productData.sku = makeProductSku(productData.name, 1);
+      productData.sku = await generateUniqueSku(productData.name, 1);
+    } else {
+      productData.sku = await generateUniqueSku(productData.sku, 1);
     }
 
     applyMediaFields(productData);
@@ -689,13 +730,17 @@ export const createProduct = async (req, res) => {
     }
 
     if (Array.isArray(productData.variants)) {
-      productData.variants = productData.variants.map((variant, idx) => ({
-        ...variant,
-        sku:
-          variant?.sku && String(variant.sku).trim()
+      productData.variants = await Promise.all(
+        productData.variants.map(async (variant, idx) => {
+          const variantSku = variant?.sku && String(variant.sku).trim()
             ? variant.sku
-            : makeProductSku(productData.name, idx + 1),
-      }));
+            : makeProductSku(productData.name, idx + 1);
+          return {
+            ...variant,
+            sku: await generateUniqueSku(variantSku, 1),
+          };
+        })
+      );
     }
 
     let moderationUpdate = {};
@@ -822,12 +867,9 @@ export const updateProduct = async (req, res) => {
       return handleResponse(res, 404, "Product not found or unauthorized");
     }
 
-    if (productData.name) {
-      if (!productData.slug || productData.slug.trim() === "") {
-        productData.slug = slugify(productData.name);
-      } else {
-        productData.slug = slugify(productData.slug);
-      }
+    if (productData.slug !== undefined || productData.name) {
+      const slugInput = productData.slug || productData.name || product.slug || product.name;
+      productData.slug = await generateUniqueSlug(slugInput, id);
     }
 
     if (productData.description !== undefined) {
@@ -839,7 +881,11 @@ export const updateProduct = async (req, res) => {
 
     const skuBaseName = productData.name || product.name;
     if (!productData.sku || String(productData.sku).trim() === "") {
-      productData.sku = product.sku || makeProductSku(skuBaseName, 1);
+      if (!product.sku) {
+        productData.sku = await generateUniqueSku(skuBaseName, 1, id);
+      }
+    } else {
+      productData.sku = await generateUniqueSku(productData.sku, 1, id);
     }
 
     applyMediaFields(productData);
@@ -857,13 +903,17 @@ export const updateProduct = async (req, res) => {
     }
 
     if (Array.isArray(productData.variants)) {
-      productData.variants = productData.variants.map((variant, idx) => ({
-        ...variant,
-        sku:
-          variant?.sku && String(variant.sku).trim()
+      productData.variants = await Promise.all(
+        productData.variants.map(async (variant, idx) => {
+          const variantSku = variant?.sku && String(variant.sku).trim()
             ? variant.sku
-            : makeProductSku(skuBaseName, idx + 1),
-      }));
+            : makeProductSku(skuBaseName, idx + 1);
+          return {
+            ...variant,
+            sku: await generateUniqueSku(variantSku, 1, id),
+          };
+        })
+      );
     }
 
     let moderationUpdate = {};
