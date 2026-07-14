@@ -69,20 +69,25 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (!id.includes('node_modules')) return
+          const normalizedId = id.replace(/\\/g, '/');
+          if (!normalizedId.includes('node_modules')) return;
 
           if (
-            id.includes('@mui/material') ||
-            id.includes('@mui/icons-material') ||
-            id.includes('@emotion/react') ||
-            id.includes('@emotion/styled')
+            normalizedId.includes('@mui/material') ||
+            normalizedId.includes('@mui/icons-material') ||
+            normalizedId.includes('@emotion/react') ||
+            normalizedId.includes('@emotion/styled')
           ) {
-            return 'vendor-mui'
+            return 'vendor-mui';
           }
 
-          if (id.includes('framer-motion')) return 'vendor-motion'
-          if (id.includes('firebase')) return 'vendor-firebase'
-          if (id.includes('recharts')) return 'vendor-charts'
+          if (normalizedId.includes('framer-motion')) return 'vendor-motion';
+          if (normalizedId.includes('firebase')) return 'vendor-firebase';
+          if (normalizedId.includes('recharts')) return 'vendor-charts';
+          if (normalizedId.includes('tesseract.js')) return 'vendor-tesseract';
+          if (normalizedId.includes('lucide-react') || normalizedId.includes('react-icons')) return 'vendor-icons';
+          if (normalizedId.includes('jspdf') || normalizedId.includes('html2canvas')) return 'vendor-pdf';
+          if (normalizedId.includes('react-router-dom') || normalizedId.includes('react-router') || normalizedId.includes('@remix-run')) return 'vendor-router';
         },
       },
     },

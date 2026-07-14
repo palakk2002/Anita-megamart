@@ -14,12 +14,12 @@ import { ProductDetailProvider } from '../../modules/customer/context/ProductDet
 import { LocationProvider } from '../../modules/customer/context/LocationContext';
 import ScrollToTop from '../../modules/customer/components/shared/ScrollToTop';
 
-// Public Pages
-import Auth from '../../modules/seller/pages/Auth';
-import ApplicationPending from '../../modules/seller/pages/ApplicationPending';
-import AdminAuth from '../../modules/admin/pages/AdminAuth';
-import DeliveryAuth from '../../modules/delivery/pages/DeliveryAuth';
-import CustomerAuth from '../../modules/customer/pages/CustomerAuth';
+// Public Pages (lazy-loaded)
+const Auth = lazy(() => import('../../modules/seller/pages/Auth'));
+const ApplicationPending = lazy(() => import('../../modules/seller/pages/ApplicationPending'));
+const AdminAuth = lazy(() => import('../../modules/admin/pages/AdminAuth'));
+const DeliveryAuth = lazy(() => import('../../modules/delivery/pages/DeliveryAuth'));
+const CustomerAuth = lazy(() => import('../../modules/customer/pages/CustomerAuth'));
 
 // Customer Pages (lazy-loaded)
 const Home = lazy(() => import('../../modules/customer/pages/Home'));
