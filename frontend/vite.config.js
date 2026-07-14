@@ -66,6 +66,7 @@ export default defineConfig({
   build: {
     minify: 'esbuild',
     sourcemap: false,
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
         manualChunks(id) {
@@ -86,7 +87,8 @@ export default defineConfig({
           if (normalizedId.includes('recharts')) return 'vendor-charts';
           if (normalizedId.includes('tesseract.js')) return 'vendor-tesseract';
           if (normalizedId.includes('lucide-react') || normalizedId.includes('react-icons')) return 'vendor-icons';
-          if (normalizedId.includes('jspdf') || normalizedId.includes('html2canvas')) return 'vendor-pdf';
+          if (normalizedId.includes('jspdf')) return 'vendor-jspdf';
+          if (normalizedId.includes('html2canvas')) return 'vendor-html2canvas';
           if (normalizedId.includes('react-router-dom') || normalizedId.includes('react-router') || normalizedId.includes('@remix-run')) return 'vendor-router';
         },
       },
