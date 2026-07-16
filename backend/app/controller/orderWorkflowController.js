@@ -303,10 +303,11 @@ export const requestReturnPickupOtp = async (req, res) => {
             const customerObj = await Customer.findById(customerId).lean();
             const phone = customerObj?.phone || order.address?.phone;
             if (phone) {
+              const appName = process.env.APP_NAME || 'Anita Mega Mart';
               await sendSmsIndiaHubOtp({
                 phone,
                 otp: result.otp,
-                message: `Your return pickup OTP for order #${orderId} is ${result.otp}. Noyo-kart.`,
+                message: `Your return pickup OTP for order #${orderId} is ${result.otp}. ${appName}.`,
               });
             }
           } catch (smsErr) {
@@ -455,10 +456,11 @@ export const requestReturnDropOtp = async (req, res) => {
           try {
             const sellerPhone = order.seller?.phone;
             if (sellerPhone) {
+              const appName = process.env.APP_NAME || 'Anita Mega Mart';
               await sendSmsIndiaHubOtp({
                 phone: sellerPhone,
                 otp: result.otp,
-                message: `Return drop OTP for order #${orderId} is ${result.otp}. Noyo-kart.`,
+                message: `Return drop OTP for order #${orderId} is ${result.otp}. ${appName}.`,
               });
             }
           } catch (smsErr) {

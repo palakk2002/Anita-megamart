@@ -11,6 +11,7 @@ import {
   getTestPushNotificationStatus,
   broadcastNotification,
   getBroadcastAudienceStats,
+  deleteNotification,
 } from "./notification.controller.js";
 
 const notificationRouter = express.Router();
@@ -21,6 +22,8 @@ notificationRouter.get("/", getNotifications);
 notificationRouter.patch("/read", markNotificationsRead);
 notificationRouter.post("/broadcast", allowRoles("admin"), broadcastNotification);
 notificationRouter.get("/broadcast/audience-stats", allowRoles("admin"), getBroadcastAudienceStats);
+notificationRouter.delete("/", deleteNotification);
+notificationRouter.delete("/:id", deleteNotification);
 
 // Backward compatibility
 notificationRouter.put("/mark-all-read", markNotificationsRead);

@@ -22,6 +22,7 @@ const AdminAuth = () => {
     const [isLogin, setIsLogin] = useState(true);
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [errorMsg, setErrorMsg] = useState('');
     const { login } = useAuth();
     const { settings } = useSettings();
     const navigate = useNavigate();
@@ -44,6 +45,7 @@ const AdminAuth = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsLoading(true);
+        setErrorMsg('');
 
         // Debug logging
         console.log('=== FRONTEND LOGIN ATTEMPT ===');
@@ -103,7 +105,9 @@ const AdminAuth = () => {
         } catch (error) {
             console.error('Login error:', error);
             console.error('Error response:', error.response?.data);
-            toast.error(error.response?.data?.message || 'Authentication failed');
+            const msg = error.response?.data?.message || 'Authentication failed. Please check your credentials.';
+            setErrorMsg(msg);
+            toast.error(msg);
         } finally {
             setIsLoading(false);
         }
@@ -213,6 +217,22 @@ const AdminAuth = () => {
                                         {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                                     </button>
                                 </div>
+
+                                <AnimatePresence>
+                                    {errorMsg && (
+                                        <motion.div 
+                                            initial={{ opacity: 0, y: -10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, height: 0 }}
+                                            className="bg-red-50 text-red-600 text-sm font-semibold p-4 rounded-[16px] border border-red-100 flex items-center gap-3"
+                                        >
+                                            <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                                                <span className="text-lg">!</span>
+                                            </div>
+                                            {errorMsg}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
 
                                 <button
                                     type="submit"

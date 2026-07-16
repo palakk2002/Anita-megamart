@@ -99,8 +99,18 @@ const SupportPage = () => {
                         sub="Formal Request"
                         onClick={() => setIsTicketModalOpen(true)}
                     />
-                    <ContactCard icon={Phone} label="Call Us" sub={supportPhone} />
-                    <ContactCard icon={Mail} label="Email Us" sub={supportEmailShort} />
+                    <ContactCard 
+                        icon={Phone} 
+                        label="Call Us" 
+                        sub={supportPhone} 
+                        onClick={() => window.location.href = `tel:${supportPhone}`} 
+                    />
+                    <ContactCard 
+                        icon={Mail} 
+                        label="Email Us" 
+                        sub={supportEmailShort} 
+                        onClick={() => window.location.href = `mailto:${supportEmail}`} 
+                    />
                 </div>
 
                 {/* Store Address */}

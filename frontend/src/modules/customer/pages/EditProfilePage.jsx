@@ -9,23 +9,68 @@ import { customerApi } from '../services/customerApi';
 const EditProfilePage = () => {
     const navigate = useNavigate();
     const { user, login } = useAuth();
+    const formatIndiaPhone = (value) => {
+        const raw = String(value || '').trim();
+        if (!raw) return '';
+        if (raw.startsWith('+91')) return raw.replace(/^\+91[\s-]*/, '');
+        if (raw.startsWith('91') && raw.length >= 12) return raw.replace(/^91[\s-]*/, '');
+        return raw;
+    };
+
     const [isLoading, setIsLoading] = useState(false);
+    const [isUploadingImage, setIsUploadingImage] = useState(false);
     const [formData, setFormData] = useState({
         name: user?.name || '',
-        phone: user?.phone || '',
+        phone: formatIndiaPhone(user?.phone || ''),
         email: user?.email || '',
-        bio: user?.bio || ''
+        bio: user?.bio || '',
+        profileImage: user?.profileImage || ''
     });
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        let { name, value } = e.target;
+        if (name === 'name') {
+            value = value.replace(/[^a-zA-Z\s]/g, '');
+        } else if (name === 'phone') {
+            value = value.replace(/\D/g, '').slice(0, 10);
+        } else if (name === 'email') {
+            value = value.toLowerCase();
+        }
+        setFormData({ ...formData, [name]: value });
+    };
+
+    const handleImageUpload = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsUploadingImage(true);
+        try {
+            const uploadData = new FormData();
+            uploadData.append('file', file);
+            
+            const response = await customerApi.uploadMedia(uploadData);
+            const imageUrl = response.data?.result?.url || response.data?.url;
+            
+            if (imageUrl) {
+                setFormData(prev => ({ ...prev, profileImage: imageUrl }));
+                toast.success('Profile photo uploaded successfully!');
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to upload image');
+        } finally {
+            setIsUploadingImage(false);
+        }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsLoading(true);
         try {
-            const response = await customerApi.updateProfile(formData);
+            const dataToSubmit = { ...formData };
+            if (dataToSubmit.phone && !dataToSubmit.phone.startsWith('+91')) {
+                dataToSubmit.phone = '+91' + dataToSubmit.phone;
+            }
+            const response = await customerApi.updateProfile(dataToSubmit);
             const updatedUser = response.data.result;
 
             // Update local auth state
@@ -56,11 +101,26 @@ const EditProfilePage = () => {
                 <div className="flex flex-col items-center mb-8">
                     <div className="relative">
                         <div className="h-28 w-28 rounded-full bg-slate-200 border-4 border-white shadow-md flex items-center justify-center overflow-hidden">
-                            <User size={48} className="text-slate-400" />
+                            {formData.profileImage ? (
+                                <img src={formData.profileImage} alt="Profile" className="h-full w-full object-cover" />
+                            ) : (
+                                <User size={48} className="text-slate-400" />
+                            )}
                         </div>
-                        <button className="absolute bottom-0 right-0 p-2 bg-primary text-primary-foreground rounded-full border-2 border-white shadow-sm hover:bg-[#0a701a] transition-colors">
-                            <Camera size={18} />
-                        </button>
+                        <label className="absolute bottom-0 right-0 p-2 bg-primary text-primary-foreground rounded-full border-2 border-white shadow-sm hover:bg-[#0a701a] transition-colors cursor-pointer">
+                            {isUploadingImage ? (
+                                <div className="h-[18px] w-[18px] border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                                <Camera size={18} />
+                            )}
+                            <input 
+                                type="file" 
+                                accept="image/*" 
+                                className="hidden" 
+                                onChange={handleImageUpload}
+                                disabled={isUploadingImage}
+                            />
+                        </label>
                     </div>
                     <p className="mt-3 text-sm font-bold text-primary">Change Photo</p>
                 </div>
@@ -85,17 +145,18 @@ const EditProfilePage = () => {
 
                         <div>
                             <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Phone Number</label>
-                            <div className="flex items-center gap-3 bg-slate-50 px-4 py-3 rounded-xl border border-slate-200 focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10 transition-all">
-                                <Phone size={20} className="text-slate-400" />
-                                <input
-                                    type="tel"
-                                    name="phone"
-                                    value={formData.phone}
-                                    onChange={handleChange}
-                                    className="bg-transparent w-full text-slate-800 font-bold outline-none placeholder:font-medium"
-                                    placeholder="Enter phone number"
-                                />
-                            </div>
+                                <div className="flex items-center gap-2 bg-slate-50 px-4 py-3 rounded-xl border border-slate-200 focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10 transition-all">
+                                    <Phone size={20} className="text-slate-400 shrink-0" />
+                                    <span className="text-slate-700 font-bold border-r border-slate-300 pr-2">+91</span>
+                                    <input
+                                        type="tel"
+                                        name="phone"
+                                        value={formData.phone}
+                                        onChange={handleChange}
+                                        className="bg-transparent w-full text-slate-800 font-bold outline-none placeholder:font-medium"
+                                        placeholder="Enter phone number"
+                                    />
+                                </div>
                         </div>
 
                         <div>

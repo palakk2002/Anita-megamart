@@ -148,6 +148,7 @@ const MainLocationHeader = ({
   categories = [],
   activeCategory,
   onCategorySelect,
+  disableCollapse = false,
 }) => {
   const { scrollY } = useScroll();
   const [isLocationOpen, setIsLocationOpen] = useState(false);
@@ -254,29 +255,29 @@ const MainLocationHeader = ({
   }, [typingState]);
 
   // Smooth scroll interpolations
-  const headerTopPadding = useTransform(scrollY, [0, 160], [16, 12]);
-  const headerBottomPadding = useTransform(scrollY, [0, 160], [4, 3]);
-  const headerRoundness = useTransform(scrollY, [0, 160], [0, 24]);
-  const bgOpacity = useTransform(scrollY, [0, 160], [1, 0.98]);
+  const headerTopPadding = disableCollapse ? 16 : useTransform(scrollY, [0, 160], [16, 12]);
+  const headerBottomPadding = disableCollapse ? 4 : useTransform(scrollY, [0, 160], [4, 3]);
+  const headerRoundness = disableCollapse ? 0 : useTransform(scrollY, [0, 160], [0, 24]);
+  const bgOpacity = disableCollapse ? 1 : useTransform(scrollY, [0, 160], [1, 0.98]);
 
   // Content animations
-  const contentHeight = useTransform(scrollY, [0, 160], ["64px", "0px"]);
-  const contentOpacity = useTransform(scrollY, [0, 160], [1, 0]);
-  const navHeight = useTransform(scrollY, [0, 200], ["60px", "0px"]);
-  const navOpacity = useTransform(scrollY, [0, 200], [1, 0]);
-  const navMargin = useTransform(scrollY, [0, 200], [4, 0]);
-  const categorySpacing = useTransform(scrollY, [0, 200], [3, 0]);
-  const cartOpacity = useTransform(scrollY, [0, 110, 150], [1, 0.7, 0]);
-  const cartScale = useTransform(scrollY, [0, 110, 150], [1, 0.9, 0.75]);
+  const contentHeight = disableCollapse ? "64px" : useTransform(scrollY, [0, 160], ["64px", "0px"]);
+  const contentOpacity = disableCollapse ? 1 : useTransform(scrollY, [0, 160], [1, 0]);
+  const navHeight = disableCollapse ? "60px" : useTransform(scrollY, [0, 200], ["60px", "0px"]);
+  const navOpacity = disableCollapse ? 1 : useTransform(scrollY, [0, 200], [1, 0]);
+  const navMargin = disableCollapse ? 4 : useTransform(scrollY, [0, 200], [4, 0]);
+  const categorySpacing = disableCollapse ? 3 : useTransform(scrollY, [0, 200], [3, 0]);
+  const cartOpacity = disableCollapse ? 1 : useTransform(scrollY, [0, 110, 150], [1, 0.7, 0]);
+  const cartScale = disableCollapse ? 1 : useTransform(scrollY, [0, 110, 150], [1, 0.9, 0.75]);
 
   // Helper to hide elements completely when collapsed to prevent clicks
-  const displayContent = useTransform(scrollY, (value) =>
+  const displayContent = disableCollapse ? "block" : useTransform(scrollY, (value) =>
     value > 160 ? "none" : "block",
   );
-  const displayNav = useTransform(scrollY, (value) =>
+  const displayNav = disableCollapse ? "flex" : useTransform(scrollY, (value) =>
     value > 200 ? "none" : "flex",
   );
-  const displayCart = useTransform(scrollY, (value) =>
+  const displayCart = disableCollapse ? "block" : useTransform(scrollY, (value) =>
     value > 150 ? "none" : "block",
   );
 

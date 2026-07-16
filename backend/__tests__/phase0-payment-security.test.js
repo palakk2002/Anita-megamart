@@ -97,7 +97,13 @@ const {
   processPhonePeWebhook,
 } = await import("../app/services/paymentService.js");
 
+const { __setActivePaymentProviderForTests } = await import("../app/services/payment/providerRegistry.js");
+const { PhonePeAdapter } = await import("../app/services/payment/providers/phonepe.adapter.js");
+
 describe("Phase 0 payment hardening", () => {
+  beforeAll(() => {
+    __setActivePaymentProviderForTests(new PhonePeAdapter(), "PHONEPE");
+  });
   beforeEach(() => {
     jest.clearAllMocks();
     process.env.RAZORPAY_KEY_ID = "rzp_test_key";

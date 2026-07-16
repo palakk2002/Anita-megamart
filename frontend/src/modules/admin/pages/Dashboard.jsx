@@ -4,6 +4,7 @@ import PageHeader from '@shared/components/ui/PageHeader';
 import StatCard from '@shared/components/ui/StatCard';
 import Badge from '@shared/components/ui/Badge';
 import { adminApi } from '../services/adminApi';
+import { useNavigate } from 'react-router-dom';
 import {
     Users,
     Store,
@@ -30,6 +31,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 const AdminDashboard = () => {
+    const navigate = useNavigate();
     const [statsData, setStatsData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
@@ -90,7 +92,8 @@ const AdminDashboard = () => {
             color: 'text-brand-600',
             bg: 'bg-brand-50',
             trend: '+12.5%',
-            description: 'Active this month'
+            description: 'Active this month',
+            link: '/admin/customers'
         },
         {
             label: 'Active Sellers',
@@ -99,7 +102,8 @@ const AdminDashboard = () => {
             color: 'text-purple-600',
             bg: 'bg-purple-50',
             trend: '+5.2%',
-            description: 'Verified stores'
+            description: 'Verified stores',
+            link: '/admin/sellers/active'
         },
         {
             label: 'Total Orders',
@@ -108,7 +112,8 @@ const AdminDashboard = () => {
             color: 'text-orange-600',
             bg: 'bg-orange-50',
             trend: '+18.4%',
-            description: 'Last 30 days'
+            description: 'Last 30 days',
+            link: '/admin/orders/all'
         },
         {
             label: 'Revenue',
@@ -117,7 +122,8 @@ const AdminDashboard = () => {
             color: 'text-brand-600',
             bg: 'bg-brand-50',
             trend: '+8.2%',
-            description: 'Net earnings'
+            description: 'Net earnings',
+            link: '/admin/wallet'
         },
     ];
 
@@ -152,7 +158,8 @@ const AdminDashboard = () => {
                         description={stat.description}
                         color={stat.color}
                         bg={stat.bg}
-                        className={cn("ring-1 ring-gray-100", stat.bg + "/30")}
+                        onClick={stat.link ? () => navigate(stat.link) : undefined}
+                        className={cn("ring-1 ring-gray-100 hover:ring-primary/30 transition-all hover:-translate-y-1 hover:shadow-md cursor-pointer", stat.bg + "/30")}
                     />
                 ))}
             </div>

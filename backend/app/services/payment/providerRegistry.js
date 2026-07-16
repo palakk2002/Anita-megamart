@@ -28,11 +28,15 @@ function buildProvider(name) {
   return new RazorpayAdapter();
 }
 
+let _overrideProvider = null;
+
 /**
  * Returns the active provider singleton. Re-resolves when the env var
  * changes (used in tests).
  */
 export function getActivePaymentProvider() {
+  if (_overrideProvider) return _overrideProvider;
+
   const desired = resolveProviderName();
   if (_provider && _providerName === desired) {
     return _provider;
@@ -46,14 +50,14 @@ export function getActivePaymentProvider() {
  * Test helper. Allows test code to swap the provider in for a fake.
  */
 export function __setActivePaymentProviderForTests(provider, name = "test") {
-  _provider = provider;
-  _providerName = name;
+  _overrideProvider = provider;
 }
 
 /**
  * Test helper. Forces the next `getActivePaymentProvider()` call to rebuild.
  */
 export function __resetPaymentProviderForTests() {
+  _overrideProvider = null;
   _provider = null;
   _providerName = null;
 }

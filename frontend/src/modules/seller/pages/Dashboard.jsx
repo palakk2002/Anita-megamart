@@ -100,6 +100,7 @@ const Dashboard = () => {
       iconBg: "bg-brand-50",
       iconColor: "text-brand-600",
       description: "vs last month",
+      path: "/seller/earnings",
     },
     {
       label: "Total Orders",
@@ -110,6 +111,7 @@ const Dashboard = () => {
       iconBg: "bg-brand-50",
       iconColor: "text-brand-600",
       description: "vs last month",
+      path: "/seller/orders",
     },
     {
       label: "Avg Order Value",
@@ -120,6 +122,7 @@ const Dashboard = () => {
       iconBg: "bg-purple-50",
       iconColor: "text-purple-600",
       description: "per order",
+      path: "/seller/orders",
     },
     {
       label: "Pending Orders",
@@ -130,6 +133,7 @@ const Dashboard = () => {
       iconBg: "bg-orange-50",
       iconColor: "text-orange-600",
       description: "need attention",
+      path: "/seller/orders?status=pending",
     },
   ];
 
@@ -248,7 +252,11 @@ const Dashboard = () => {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat) => (
-          <Card key={stat.label} className="hover:shadow-lg transition-shadow">
+          <Card 
+            key={stat.label} 
+            className="hover:shadow-lg transition-all cursor-pointer active:scale-[0.98] hover:-translate-y-1"
+            onClick={() => stat.path && navigate(stat.path)}
+          >
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <p className="text-base font-medium text-slate-600">{stat.label}</p>

@@ -110,7 +110,7 @@ export const getCustomerProfile = async (req, res) => {
 ================================ */
 export const updateCustomerProfile = async (req, res) => {
     try {
-        const { name, email, addresses } = req.body;
+        const { name, email, addresses, profileImage } = req.body;
 
         const customer = await Customer.findById(req.user.id);
         if (!customer) {
@@ -120,6 +120,7 @@ export const updateCustomerProfile = async (req, res) => {
         if (name) customer.name = name;
         if (email) customer.email = email;
         if (addresses) customer.addresses = addresses;
+        if (profileImage !== undefined) customer.profileImage = profileImage;
 
         await customer.save();
 
