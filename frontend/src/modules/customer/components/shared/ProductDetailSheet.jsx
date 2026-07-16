@@ -1076,7 +1076,7 @@ const ProductDetailSheet = () => {
                                             <motion.button
                                                 whileTap={{ scale: 0.9 }}
                                                 onClick={handleIncrement}
-                                                className="w-10 h-10 bg-gradient-to-br from-primary to-[var(--brand-400)] rounded-xl flex items-center justify-center text-white shadow-lg shadow-brand-100/50 hover:shadow-brand-200 transition-all border border-white/20"
+                                                className="w-10 h-10 bg-primary hover:bg-primary/90 rounded-xl flex items-center justify-center text-white shadow-lg shadow-brand-100/50 transition-all border border-white/20"
                                             >
                                                 <Plus size={18} strokeWidth={3.5} />
                                             </motion.button>
@@ -1086,7 +1086,7 @@ const ProductDetailSheet = () => {
                                             whileHover={{ scale: 1.02 }}
                                             whileTap={{ scale: 0.95 }}
                                             onClick={handleAddToCart}
-                                            className="flex-1 bg-gradient-to-r from-primary to-[var(--brand-400)] text-white h-[56px] rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-xl shadow-brand-100 transition-all border border-white/20 uppercase tracking-[0.05em] whitespace-nowrap px-4"
+                                            className="flex-1 bg-primary text-white h-[56px] rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-xl shadow-brand-100 transition-all hover:bg-primary/90 border border-white/20 uppercase tracking-[0.05em] whitespace-nowrap px-4"
                                         >
                                             <ShoppingBag size={18} strokeWidth={3} />
                                             ADD TO CART

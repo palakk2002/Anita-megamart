@@ -9,6 +9,7 @@ import React, {
 import { customerApi } from "../services/customerApi";
 import { hasValidStoredAuthToken } from "@core/utils/authStorage";
 import { getJSON, setJSON, STORAGE_KEYS } from "@core/utils/storage";
+import { toast } from "sonner";
 
 const LocationContext = createContext(undefined);
 const STORAGE_KEY = STORAGE_KEYS.LOCATION;
@@ -199,6 +200,7 @@ export const LocationProvider = ({ children }) => {
             persist: true,
             updateSavedHome: false,
           });
+          toast.success("Location fetched successfully", { position: "bottom-center" });
           resolve({ ok: true, location: liveLocation });
         } catch (err) {
           const loc = fallbackFromCoords(latitude, longitude);
@@ -318,34 +320,9 @@ export const LocationProvider = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-detect location on app open when permission is already granted.
-  // This gives a Swiggy/Zomato-like experience where the location bar
-  // updates automatically without requiring the user to tap anything.
+  // Auto-detect location on app open.
   useEffect(() => {
-    const tryAutoFetch = async () => {
-      // Flutter native app — always auto-fetch (native wrapper handles permissions)
-      if (window.Flutter) {
-        fetchAndCacheLocation();
-        return;
-      }
-
-      // Browser — only auto-fetch if geolocation permission is already "granted".
-      // If state is "prompt" we must NOT call getCurrentPosition here because
-      // browsers will silently ignore it (no user gesture) or show a prompt the
-      // user didn't ask for. If "denied", there's nothing to do.
-      if (navigator.permissions && navigator.permissions.query) {
-        try {
-          const status = await navigator.permissions.query({ name: 'geolocation' });
-          if (status.state === 'granted') {
-            fetchAndCacheLocation();
-          }
-        } catch {
-          // Permissions API doesn't support geolocation query in this browser — skip
-        }
-      }
-    };
-
-    tryAutoFetch();
+    fetchAndCacheLocation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

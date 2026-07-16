@@ -72,7 +72,11 @@ const RootLayout = () => {
 
     setActiveRole(targetRole);
 
-    return <Outlet />;
+    return (
+        <LocationProvider>
+            <Outlet />
+        </LocationProvider>
+    );
 };
 
 const CustomerLayoutWrapper = () => {
@@ -81,22 +85,20 @@ const CustomerLayoutWrapper = () => {
     }, []);
 
     return (
-        <LocationProvider>
-            <WishlistProvider>
-                <CartProvider>
-                    <CartAnimationProvider>
-                        <ProductDetailProvider>
-                            <ScrollToTop />
-                            <CustomerLayout>
-                                <Suspense fallback={<div className="flex h-screen items-center justify-center font-outfit">Loading...</div>}>
-                                    <Outlet />
-                                </Suspense>
-                            </CustomerLayout>
-                        </ProductDetailProvider>
-                    </CartAnimationProvider>
-                </CartProvider>
-            </WishlistProvider>
-        </LocationProvider>
+        <WishlistProvider>
+            <CartProvider>
+                <CartAnimationProvider>
+                    <ProductDetailProvider>
+                        <ScrollToTop />
+                        <CustomerLayout>
+                            <Suspense fallback={<div className="flex h-screen items-center justify-center font-outfit">Loading...</div>}>
+                                <Outlet />
+                            </Suspense>
+                        </CustomerLayout>
+                    </ProductDetailProvider>
+                </CartAnimationProvider>
+            </CartProvider>
+        </WishlistProvider>
     );
 };
 
