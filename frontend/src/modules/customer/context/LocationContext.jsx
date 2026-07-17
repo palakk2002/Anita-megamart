@@ -97,6 +97,11 @@ export const LocationProvider = ({ children }) => {
         return;
       }
 
+      let toastId = null;
+      if (!options.autoDetect || !sessionStorage.getItem('location_toast_shown')) {
+        toastId = toast.loading("Detecting your location...", { position: "bottom-center" });
+      }
+
       setIsFetchingLocation(true);
       setLocationError(null);
 
@@ -201,8 +206,8 @@ export const LocationProvider = ({ children }) => {
             updateSavedHome: false,
           });
           
-          if (!options.autoDetect || !sessionStorage.getItem('location_toast_shown')) {
-            toast.success("Location fetched successfully", { position: "bottom-center" });
+          if (toastId) {
+            toast.success("Location fetched successfully", { id: toastId, position: "bottom-center" });
             if (options.autoDetect) sessionStorage.setItem('location_toast_shown', 'true');
           }
           
@@ -210,6 +215,12 @@ export const LocationProvider = ({ children }) => {
         } catch (err) {
           const loc = fallbackFromCoords(latitude, longitude);
           updateLocation(loc, { persist: true, updateSavedHome: false });
+          
+          if (toastId) {
+             toast.success("Coordinates found, but address resolution failed", { id: toastId, position: "bottom-center" });
+             if (options.autoDetect) sessionStorage.setItem('location_toast_shown', 'true');
+          }
+
           resolve({
             ok: true,
             location: loc,
@@ -224,6 +235,9 @@ export const LocationProvider = ({ children }) => {
         const message = typeof error === 'string' ? error : (error.message || "Location permission denied");
         setLocationError(message);
         setIsFetchingLocation(false);
+        if (toastId) {
+          toast.error(message, { id: toastId, position: "bottom-center" });
+        }
         resolve({ ok: false, error: message });
       };
 
