@@ -74,6 +74,7 @@ const RootLayout = () => {
 
     return (
         <LocationProvider>
+            <ScrollToTop />
             <Outlet />
         </LocationProvider>
     );
@@ -89,7 +90,6 @@ const CustomerLayoutWrapper = () => {
             <CartProvider>
                 <CartAnimationProvider>
                     <ProductDetailProvider>
-                        <ScrollToTop />
                         <CustomerLayout>
                             <Suspense fallback={<div className="flex h-screen items-center justify-center font-outfit">Loading...</div>}>
                                 <Outlet />

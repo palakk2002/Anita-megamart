@@ -57,12 +57,35 @@ const Notifications = () => {
     });
   }, []);
 
-  const handleMarkAsRead = async (id) => {
+  const handleNotificationClick = async (notification) => {
+    if (!notification.isRead) {
+      try {
+        await deliveryApi.markNotificationRead(notification.id || notification._id);
+        setNotifications(notifications.map(n => (n.id || n._id) === (notification.id || notification._id) ? { ...n, isRead: true } : n));
+      } catch (error) {
+        toast.error("Failed to update status");
+      }
+    }
+    
+    if (notification.data?.orderId) {
+      navigate(`/delivery/order-details/${notification.data.orderId}`);
+    } else if (notification.data?.link) {
+      if (notification.data.link.startsWith('http')) {
+        window.location.href = notification.data.link;
+      } else {
+        navigate(notification.data.link);
+      }
+    }
+  };
+
+  const handleDelete = async (e, id) => {
+    e.stopPropagation();
     try {
-      await deliveryApi.markNotificationRead(id);
-      setNotifications(notifications.map(n => n._id === id ? { ...n, isRead: true } : n));
+      await deliveryApi.deleteNotification(id);
+      setNotifications(notifications.filter(n => (n.id || n._id) !== id));
+      toast.success("Notification deleted");
     } catch (error) {
-      toast.error("Failed to update status");
+      toast.error("Failed to delete notification");
     }
   };
 
@@ -90,9 +113,9 @@ const Notifications = () => {
   };
 
   return (
-    <div className="bg-gray-50/50 min-h-screen pb-24 font-sans">
+    <div className="bg-gray-50/50 min-h-screen pb-24 pt-[72px] font-sans">
       {/* Header */}
-      <div className="bg-white shadow-sm p-4 sticky top-0 z-30 backdrop-blur-md bg-white/90">
+      <div className="bg-white shadow-sm p-4 fixed top-0 w-full max-w-md inset-x-0 mx-auto z-30 backdrop-blur-md bg-white/90">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center">
             <Button
@@ -130,10 +153,10 @@ const Notifications = () => {
             <AnimatePresence mode="popLayout">
               {notifications.map((notification) => (
                 <motion.div
-                  key={notification._id}
+                  key={notification.id || notification._id}
                   variants={itemVariants}
                   layout
-                  onClick={() => !notification.isRead && handleMarkAsRead(notification._id)}>
+                  onClick={() => handleNotificationClick(notification)}>
                   <Card
                     className={`p-4 border-none shadow-sm relative overflow-hidden transition-all duration-300 cursor-pointer ${!notification.isRead
                       ? "bg-brand-50/50 border-l-4 border-l-brand-500 shadow-brand-500/5 scale-[1.02]"
@@ -160,11 +183,18 @@ const Notifications = () => {
                         <p className={`text-xs mb-2 leading-snug ${!notification.isRead ? "text-gray-900 font-medium" : "text-gray-500"}`}>
                           {notification.message}
                         </p>
-                        <div className="flex items-center text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                        <div className="flex items-center text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-1">
                           <Clock size={10} className="mr-1" />
                           {new Date(notification.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}, {new Date(notification.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </div>
                       </div>
+                      
+                      <button
+                        onClick={(e) => handleDelete(e, notification.id || notification._id)}
+                        className="p-2 ml-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors flex-shrink-0"
+                      >
+                        <Trash2 size={18} />
+                      </button>
                     </div>
                   </Card>
                 </motion.div>

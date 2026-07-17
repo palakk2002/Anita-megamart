@@ -164,8 +164,8 @@ const Auth = () => {
       }
       setFormData({ ...formData, [name]: cleaned });
     } else if (name === "phone") {
-      // Contact number: only digits, max 10 characters
-      const digitsOnly = value.replace(/[^0-9]/g, "").slice(0, 10);
+      // Contact number: only digits, max 10 characters, strictly starting with 6-9
+      const digitsOnly = value.replace(/[^0-9]/g, "").replace(/^[^6-9]+/, "").slice(0, 10);
       if (digitsOnly !== formData.phone) {
         resetVerificationState("phone");
       }

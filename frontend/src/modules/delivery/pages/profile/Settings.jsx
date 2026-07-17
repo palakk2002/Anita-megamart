@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Bell, Smartphone, Moon, Globe, ChevronRight } from "lucide-react";
+import { ArrowLeft, Bell, Smartphone, Globe, ChevronRight } from "lucide-react";
 import Button from "@/shared/components/ui/Button";
 import Card from "@/shared/components/ui/Card";
 import { toast } from "sonner";
@@ -13,7 +13,6 @@ const Settings = () => {
     emailAlerts: false,
     sound: true,
     vibration: true,
-    darkMode: false,
     language: "English",
   });
 
@@ -23,9 +22,9 @@ const Settings = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
+    <div className="min-h-screen bg-gray-50 pb-24 pt-[72px]">
       {/* Header */}
-      <div className="bg-white shadow-sm sticky top-0 z-10">
+      <div className="bg-white shadow-sm fixed top-0 w-full max-w-md inset-x-0 mx-auto z-30">
         <div className="flex items-center p-4">
           <button 
             onClick={() => navigate(-1)} 
@@ -81,19 +80,6 @@ const Settings = () => {
                 </div>
               </div>
               <ChevronRight size={20} className="text-gray-300" />
-            </div>
-
-            <div className="p-4 flex justify-between items-center cursor-pointer" onClick={() => toggleSetting('darkMode')}>
-              <div className="flex items-center">
-                <Moon size={20} className="text-gray-400 mr-3" />
-                <div>
-                  <h4 className="font-medium text-gray-800">Dark Mode</h4>
-                  <p className="text-xs text-gray-500">Easier on the eyes at night</p>
-                </div>
-              </div>
-              <div className={`w-12 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out ${settings.darkMode ? 'bg-primary' : 'bg-gray-300'}`}>
-                <div className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${settings.darkMode ? 'translate-x-6' : 'translate-x-0'}`} />
-              </div>
             </div>
           </Card>
         </section>

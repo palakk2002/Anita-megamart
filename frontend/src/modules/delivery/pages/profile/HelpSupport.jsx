@@ -45,9 +45,9 @@ const HelpSupport = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
+    <div className="min-h-screen bg-gray-50 pb-24 pt-[72px]">
       {/* Header */}
-      <div className="bg-white shadow-sm sticky top-0 z-10">
+      <div className="bg-white shadow-sm fixed top-0 w-full max-w-md inset-x-0 mx-auto z-30">
         <div className="flex items-center p-4">
           <button
             onClick={() => navigate(-1)}
@@ -116,13 +116,6 @@ const HelpSupport = () => {
             ))}
           </div>
         </section>
-
-        <div className="text-center pt-8">
-          <p className="text-gray-500 text-sm">Still need help?</p>
-          <Button variant="link" className="text-primary font-bold">
-            View All FAQs
-          </Button>
-        </div>
       </div>
     </div>
   );

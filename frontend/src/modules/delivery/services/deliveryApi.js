@@ -46,6 +46,7 @@ export const deliveryApi = {
     ),
   getNotifications: (config = {}) => axiosInstance.get("/notifications", config),
   markNotificationRead: (id) => axiosInstance.put(`/notifications/${id}/read`),
+  deleteNotification: (id) => axiosInstance.delete(`/notifications/${id}`),
   markAllNotificationsRead: () =>
     axiosInstance.put("/notifications/mark-all-read"),
   requestWithdrawal: (data) =>

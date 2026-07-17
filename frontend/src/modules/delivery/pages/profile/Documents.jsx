@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 const Documents = () => {
   const navigate = useNavigate();
+  const [previewDoc, setPreviewDoc] = useState(null);
 
   const [docs, setDocs] = useState([
     {
@@ -76,9 +77,9 @@ const Documents = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
+    <div className="min-h-screen bg-gray-50 pb-24 pt-[72px]">
       {/* Header */}
-      <div className="bg-white shadow-sm sticky top-0 z-10">
+      <div className="bg-white shadow-sm fixed top-0 w-full max-w-md inset-x-0 mx-auto z-30">
         <div className="flex items-center p-4">
           <button 
             onClick={() => navigate(-1)} 
@@ -128,7 +129,7 @@ const Documents = () => {
                   variant="outline" 
                   size="sm" 
                   className="w-full text-xs h-8"
-                  onClick={() => toast.success("Downloading document...")}
+                  onClick={() => setPreviewDoc(doc)}
                 >
                   View File
                 </Button>
@@ -137,6 +138,42 @@ const Documents = () => {
           </Card>
         ))}
       </div>
+
+      {/* Document Preview Modal */}
+      {previewDoc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col">
+            <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+              <div>
+                <h3 className="font-bold text-gray-900">{previewDoc.title}</h3>
+                <p className="text-xs text-gray-500">{previewDoc.fileName}</p>
+              </div>
+              <button 
+                onClick={() => setPreviewDoc(null)}
+                className="p-2 bg-gray-200 rounded-full hover:bg-gray-300 text-gray-700"
+              >
+                <XCircle size={20} />
+              </button>
+            </div>
+            <div className="p-6 flex flex-col items-center justify-center bg-gray-100 min-h-[300px]">
+              <FileCheck size={64} className="text-gray-300 mb-4" />
+              <p className="text-gray-500 font-medium text-sm mb-6 text-center">
+                This is a preview of your uploaded document.
+              </p>
+              <img 
+                src={`https://placehold.co/400x300/e2e8f0/64748b?text=${encodeURIComponent(previewDoc.title)}`} 
+                alt={previewDoc.title}
+                className="rounded-lg border shadow-sm max-w-full"
+              />
+            </div>
+            <div className="p-4 border-t bg-white">
+              <Button className="w-full" onClick={() => setPreviewDoc(null)}>
+                Close Preview
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

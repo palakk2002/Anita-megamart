@@ -11,6 +11,7 @@ const PersonalDetails = () => {
   const navigate = useNavigate();
   const { user, refreshUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+  const fileInputRef = React.useRef(null);
   const [formData, setFormData] = useState({
     fullName: "",
     phone: "",
@@ -33,6 +34,19 @@ const PersonalDetails = () => {
     }
   }, [user]);
 
+  const handleImageClick = () => {
+    if (isEditing) {
+      fileInputRef.current?.click();
+    }
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      toast.info("Image upload will be supported in a future update!");
+    }
+  };
+
   const handleSave = async () => {
     try {
       const response = await deliveryApi.updateProfile({
@@ -53,9 +67,9 @@ const PersonalDetails = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
+    <div className="min-h-screen bg-gray-50 pb-24 pt-[72px]">
       {/* Header */}
-      <div className="bg-white shadow-sm sticky top-0 z-10">
+      <div className="bg-white shadow-sm fixed top-0 w-full max-w-md inset-x-0 mx-auto z-30">
         <div className="flex items-center p-4">
           <button 
             onClick={() => navigate(-1)} 
@@ -86,8 +100,18 @@ const PersonalDetails = () => {
       <div className="p-4 max-w-lg mx-auto space-y-6">
         {/* Profile Photo */}
         <div className="flex flex-col items-center justify-center py-6">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleImageChange}
+            accept="image/*"
+            className="hidden"
+          />
           <div className="relative">
-            <div className="w-24 h-24 rounded-full p-1 bg-white shadow-md">
+            <div 
+              className={`w-24 h-24 rounded-full p-1 bg-white shadow-md ${isEditing ? 'cursor-pointer hover:opacity-90' : ''}`}
+              onClick={handleImageClick}
+            >
               <img
                 src={user?.profileImage || "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"}
                 alt="Profile"
@@ -95,7 +119,10 @@ const PersonalDetails = () => {
               />
             </div>
             {isEditing && (
-              <button className="absolute bottom-0 right-0 bg-primary text-primary-foreground p-1.5 rounded-full shadow-lg hover:bg-primary/90 transition-colors">
+              <button 
+                onClick={handleImageClick}
+                className="absolute bottom-0 right-0 bg-primary text-primary-foreground p-1.5 rounded-full shadow-lg hover:bg-primary/90 transition-colors"
+              >
                 <User size={14} />
               </button>
             )}
@@ -127,7 +154,7 @@ const PersonalDetails = () => {
             label="Email Address"
             value={formData.email}
             readOnly={!isEditing}
-            onChange={(e) => setFormData({...formData, email: e.target.value})}
+            onChange={(e) => setFormData({...formData, email: e.target.value.toLowerCase()})}
             icon={Mail}
             type="email"
             className={!isEditing ? "bg-gray-50 border-transparent" : ""}
@@ -155,9 +182,11 @@ const PersonalDetails = () => {
             <Input
               label="Date of Birth"
               value={formData.dob}
-              readOnly={true}
+              readOnly={!isEditing}
+              onChange={(e) => setFormData({...formData, dob: e.target.value})}
+              type={isEditing ? "date" : "text"}
               icon={Calendar}
-              className="bg-gray-50 border-transparent"
+              className={!isEditing ? "bg-gray-50 border-transparent" : ""}
             />
             <Input
               label="Blood Group"

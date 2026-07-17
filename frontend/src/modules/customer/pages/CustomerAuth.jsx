@@ -388,7 +388,7 @@ const CustomerAuth = () => {
                                                 value={formData.phone}
                                                 placeholder="Mobile Number"
                                                 className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-20 pr-4 py-4 text-sm font-bold text-gray-800 outline-none focus:bg-white transition-all"
-                                                onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '') })}
+                                                onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '').replace(/^[^6-9]+/, '') })}
                                                 onFocus={(e) => e.target.style.borderColor = activeCategory.theme}
                                                 onBlur={(e) => e.target.style.borderColor = '#F3F4F6'}
                                             />

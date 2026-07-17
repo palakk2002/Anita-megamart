@@ -83,7 +83,7 @@ export const LocationProvider = ({ children }) => {
 
   // Resolve location once using browser geolocation + Google Maps Geocoding.
   // Must be called directly from a user gesture (click/tap) for the browser to show the permission prompt.
-  const fetchAndCacheLocation = () =>
+  const fetchAndCacheLocation = (options = { autoDetect: false }) =>
     new Promise((resolve) => {
       if (
         typeof window === "undefined" ||
@@ -200,7 +200,12 @@ export const LocationProvider = ({ children }) => {
             persist: true,
             updateSavedHome: false,
           });
-          toast.success("Location fetched successfully", { position: "bottom-center" });
+          
+          if (!options.autoDetect || !sessionStorage.getItem('location_toast_shown')) {
+            toast.success("Location fetched successfully", { position: "bottom-center" });
+            if (options.autoDetect) sessionStorage.setItem('location_toast_shown', 'true');
+          }
+          
           resolve({ ok: true, location: liveLocation });
         } catch (err) {
           const loc = fallbackFromCoords(latitude, longitude);
@@ -322,7 +327,7 @@ export const LocationProvider = ({ children }) => {
 
   // Auto-detect location on app open.
   useEffect(() => {
-    fetchAndCacheLocation();
+    fetchAndCacheLocation({ autoDetect: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -334,7 +339,7 @@ export const LocationProvider = ({ children }) => {
     refreshAddresses,
     isFetchingLocation,
     locationError,
-    refreshLocation: fetchAndCacheLocation,
+    refreshLocation: () => fetchAndCacheLocation({ autoDetect: false }),
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [currentLocation, savedAddresses, isFetchingLocation, locationError, refreshAddresses]);
 

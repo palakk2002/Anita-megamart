@@ -12,10 +12,24 @@ const SafetyPrivacy = () => {
   const { settings } = useSettings();
   const appName = settings?.appName || "App";
 
-  const [contacts, setContacts] = useState([
-    { id: 1, name: "Anita Kumar (Wife)", phone: "+91 98765 12345" },
-    { id: 2, name: "Ravi Singh (Brother)", phone: "+91 98765 67890" },
-  ]);
+  const [contacts, setContacts] = useState(() => {
+    const saved = localStorage.getItem("emergencyContacts");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        // ignore
+      }
+    }
+    return [
+      { id: 1, name: "Anita Kumar (Wife)", phone: "+91 98765 12345" },
+      { id: 2, name: "Ravi Singh (Brother)", phone: "+91 98765 67890" },
+    ];
+  });
+
+  React.useEffect(() => {
+    localStorage.setItem("emergencyContacts", JSON.stringify(contacts));
+  }, [contacts]);
 
   const [newContact, setNewContact] = useState({ name: "", phone: "" });
   const [showAddContact, setShowAddContact] = useState(false);
@@ -35,9 +49,9 @@ const SafetyPrivacy = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
+    <div className="min-h-screen bg-gray-50 pb-24 pt-[72px]">
       {/* Header */}
-      <div className="bg-white shadow-sm sticky top-0 z-10">
+      <div className="bg-white shadow-sm fixed top-0 w-full max-w-md inset-x-0 mx-auto z-30">
         <div className="flex items-center p-4">
           <button 
             onClick={() => navigate(-1)} 
@@ -71,7 +85,7 @@ const SafetyPrivacy = () => {
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="text-red-500 hover:bg-red-50"
+                  className="text-red-500 hover:bg-red-50 flex-shrink-0"
                   onClick={() => handleRemoveContact(contact.id)}
                 >
                   <Trash2 size={18} />
@@ -84,14 +98,15 @@ const SafetyPrivacy = () => {
                 <Input 
                   placeholder="Name (e.g. Wife, Brother)" 
                   value={newContact.name}
-                  onChange={(e) => setNewContact({...newContact, name: e.target.value})}
+                  onChange={(e) => setNewContact({...newContact, name: e.target.value.replace(/[^a-zA-Z\s]/g, '')})}
                   className="mb-3 bg-white"
                 />
                 <Input 
-                  placeholder="Phone Number" 
+                  placeholder="Phone Number (10 digits)" 
                   value={newContact.phone}
-                  onChange={(e) => setNewContact({...newContact, phone: e.target.value})}
+                  onChange={(e) => setNewContact({...newContact, phone: e.target.value.replace(/\D/g, '')})}
                   className="mb-3 bg-white"
+                  maxLength={10}
                 />
                 <div className="flex space-x-2">
                   <Button size="sm" onClick={handleAddContact} className="flex-1">Save</Button>

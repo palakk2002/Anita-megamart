@@ -1,10 +1,12 @@
 import React from 'react';
 import { ChevronLeft, ScrollText } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSettings } from '@core/context/SettingsContext';
 
 const TermsPage = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const fromDelivery = searchParams.get('from') === 'delivery';
     const { settings } = useSettings();
     const appName = settings?.appName || 'App';
     const companyName = settings?.companyName || appName;
@@ -14,14 +16,20 @@ const TermsPage = () => {
             <div className="bg-white sticky top-0 z-30 px-4 py-3 flex items-center gap-1 shadow-sm">
                 <button
                     onClick={() => {
-                        if (window.history.state && window.history.state.idx > 0) {
+                        if (window.history.length > 1) {
                             navigate(-1);
                         } else if (window.opener) {
                             window.close();
-                            navigate('/login'); // Fallback if close fails
-                        } else {
-                            navigate('/login');
                         }
+                        
+                        // Fallback if we couldn't navigate back or close
+                        setTimeout(() => {
+                            if (fromDelivery) {
+                                navigate('/delivery/auth');
+                            } else {
+                                navigate('/');
+                            }
+                        }, 100);
                     }}
                     className="p-2 -ml-2 rounded-full hover:bg-slate-100 transition-colors"
                 >

@@ -116,17 +116,17 @@ const Profile = () => {
   };
 
   return (
-    <div className="bg-gray-50/50 min-h-screen pb-24">
+    <div className="bg-gray-50/50 min-h-screen pb-24 pt-[224px]">
       {/* Header */}
-      <div className="bg-primary pt-12 pb-24 px-6 rounded-b-[2.5rem] relative shadow-lg">
+      <div className="bg-primary pt-12 pb-8 px-6 rounded-b-[2.5rem] fixed top-0 w-full max-w-md inset-x-0 mx-auto z-30 shadow-lg">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-white text-2xl font-bold">My Profile</h1>
           <Button
             variant="ghost"
             size="icon"
             className="text-white hover:bg-white/20"
-            onClick={() => toast.info("No new notifications")}>
-            <Bell size={24} />
+            onClick={() => navigate("/delivery/notifications")}>
+            <Bell size={28} />
           </Button>
         </div>
 
@@ -142,7 +142,7 @@ const Profile = () => {
             <div className="absolute bottom-0 right-0 w-6 h-6 bg-brand-500 border-2 border-white rounded-full"></div>
           </div>
           <div className="text-white">
-            <h2 className="font-bold text-xl">{user?.name || "Delivery Partner"}</h2>
+            <h2 className="font-bold text-xl capitalize">{user?.name || "Delivery Partner"}</h2>
             <p className="text-white/80 text-sm flex items-center mb-1">
               <Phone size={14} className="mr-1" /> {user?.phone || "+91 XXXXX XXXXX"}
             </p>
@@ -163,7 +163,7 @@ const Profile = () => {
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.2 }}
-        className="mx-6 -mt-12 bg-white rounded-2xl p-4 shadow-xl mb-6 flex justify-between text-center relative z-10">
+        className="mx-6 mt-6 bg-white rounded-2xl p-4 shadow-xl mb-6 flex justify-between text-center relative z-10">
         <div className="flex-1">
           <p className="text-gray-400 text-[10px] uppercase font-bold tracking-wider">
             Joined

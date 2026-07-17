@@ -602,6 +602,7 @@ export const getBroadcastAudienceStats = async (req, res) => {
   }
 };
 
+
 export default {
   registerPushToken,
   removePushToken,
@@ -613,4 +614,5 @@ export default {
   getTestPushNotificationStatus,
   broadcastNotification,
   getBroadcastAudienceStats,
+  deleteNotification,
 };

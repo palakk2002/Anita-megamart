@@ -74,8 +74,15 @@ const OtpInput = ({ orderId, isReturn = false, isReturnDrop = false, onSuccess, 
    * Auto-focus previous field on backspace when current field is empty
    */
   const handleKeyDown = (index, e) => {
-    if (e.key === "Backspace" && !otp[index] && index > 0) {
-      inputRefs[index - 1].current?.focus();
+    if (e.key === "Backspace") {
+      if (!otp[index] && index > 0) {
+        inputRefs[index - 1].current?.focus();
+      } else if (otp[index] && e.target.selectionStart === 0 && e.target.selectionEnd === 0) {
+        e.preventDefault();
+        const newOtp = [...otp];
+        newOtp[index] = "";
+        setOtp(newOtp);
+      }
     }
   };
 
@@ -260,6 +267,7 @@ const OtpInput = ({ orderId, isReturn = false, isReturnDrop = false, onSuccess, 
             value={digit}
             onChange={(e) => handleChange(index, e.target.value)}
             onKeyDown={(e) => handleKeyDown(index, e)}
+            onFocus={(e) => e.target.select()}
             onPaste={index === 0 ? handlePaste : undefined}
             disabled={isLoading}
             className={`w-14 h-16 text-center text-2xl font-bold font-mono border-2 rounded-xl transition-all duration-200 outline-none focus:outline-none focus:ring-2 focus:ring-offset-0 ${error
