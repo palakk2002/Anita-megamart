@@ -339,7 +339,7 @@ export const LocationProvider = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-detect location on app open.
+  // Auto-detect location on app open for everyone (new and old users).
   useEffect(() => {
     fetchAndCacheLocation({ autoDetect: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
