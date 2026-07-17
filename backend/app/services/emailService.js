@@ -104,18 +104,62 @@ export async function sendSellerVerificationOtpEmail({
     };
   }
 
+  const appName = String(process.env.APP_NAME || "Anita Mega Mart").trim();
+
   const transporter = getTransporter();
   await transporter.sendMail({
     from: getMailFrom(),
     to: email,
-    subject: "Verify your seller signup email",
-    text: `Your seller signup verification code is ${otp}. This code expires in ${expiresInMinutes} minutes.`,
+    subject: `${appName} — Your Verification Code is ${otp}`,
+    text: `Hi,\n\nYour ${appName} seller signup verification code is: ${otp}\n\nThis code expires in ${expiresInMinutes} minutes.\n\nIf you did not request this, please ignore this email.\n\nRegards,\n${appName} Team`,
     html: `
-      <div style="font-family: Arial, sans-serif; color: #0f172a;">
-        <p>Your seller signup verification code is:</p>
-        <p style="font-size: 28px; font-weight: 700; letter-spacing: 6px;">${otp}</p>
-        <p>This code expires in ${expiresInMinutes} minutes.</p>
-      </div>
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Verification Code</title>
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #f4f4f7; font-family: 'Segoe UI', Arial, sans-serif;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f4f4f7; padding: 40px 0;">
+          <tr>
+            <td align="center">
+              <table role="presentation" width="480" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                <!-- Header -->
+                <tr>
+                  <td style="background-color: #7c3aed; padding: 28px 32px; text-align: center;">
+                    <h1 style="margin: 0; color: #ffffff; font-size: 22px; font-weight: 700; letter-spacing: 0.5px;">${appName}</h1>
+                  </td>
+                </tr>
+                <!-- Body -->
+                <tr>
+                  <td style="padding: 36px 32px 24px;">
+                    <p style="margin: 0 0 8px; color: #374151; font-size: 15px;">Hi there,</p>
+                    <p style="margin: 0 0 24px; color: #374151; font-size: 15px; line-height: 1.6;">
+                      Use the following code to verify your seller account signup. This code is valid for <strong>${expiresInMinutes} minutes</strong>.
+                    </p>
+                    <div style="text-align: center; margin: 0 0 28px;">
+                      <span style="display: inline-block; background-color: #f3f0ff; border: 2px dashed #7c3aed; border-radius: 10px; padding: 16px 40px; font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #7c3aed;">${otp}</span>
+                    </div>
+                    <p style="margin: 0; color: #6b7280; font-size: 13px; line-height: 1.5;">
+                      If you did not request this code, you can safely ignore this email. Someone may have entered your email address by mistake.
+                    </p>
+                  </td>
+                </tr>
+                <!-- Footer -->
+                <tr>
+                  <td style="padding: 20px 32px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; text-align: center;">
+                    <p style="margin: 0; color: #9ca3af; font-size: 11px;">
+                      &copy; ${new Date().getFullYear()} ${appName}. All rights reserved.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
     `,
   });
 
