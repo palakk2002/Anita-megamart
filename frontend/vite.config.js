@@ -52,9 +52,26 @@ function firebaseMessagingSwPlugin() {
   }
 }
 
+function forceExitAfterBuildPlugin() {
+  let command = 'serve'
+
+  return {
+    name: 'force-exit-after-build',
+    configResolved(config) {
+      command = config.command
+    },
+    closeBundle() {
+      if (command !== 'build') return
+      // Vercel treats a build as hung if the Node process never exits after
+      // output is written; force it closed instead of waiting on a lingering handle.
+      setTimeout(() => process.exit(0), 0)
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), firebaseMessagingSwPlugin()],
+  plugins: [react(), firebaseMessagingSwPlugin(), forceExitAfterBuildPlugin()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -66,30 +83,24 @@ export default defineConfig({
   build: {
     minify: 'esbuild',
     sourcemap: false,
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 2000,
     rollupOptions: {
       output: {
         manualChunks(id) {
-          const normalizedId = id.replace(/\\/g, '/');
-          if (!normalizedId.includes('node_modules')) return;
+          if (!id.includes('node_modules')) return
 
           if (
-            normalizedId.includes('@mui/material') ||
-            normalizedId.includes('@mui/icons-material') ||
-            normalizedId.includes('@emotion/react') ||
-            normalizedId.includes('@emotion/styled')
+            id.includes('@mui/material') ||
+            id.includes('@mui/icons-material') ||
+            id.includes('@emotion/react') ||
+            id.includes('@emotion/styled')
           ) {
-            return 'vendor-mui';
+            return 'vendor-mui'
           }
 
-          if (normalizedId.includes('framer-motion')) return 'vendor-motion';
-          if (normalizedId.includes('firebase')) return 'vendor-firebase';
-          if (normalizedId.includes('recharts')) return 'vendor-charts';
-          if (normalizedId.includes('tesseract.js')) return 'vendor-tesseract';
-          if (normalizedId.includes('lucide-react') || normalizedId.includes('react-icons')) return 'vendor-icons';
-          if (normalizedId.includes('jspdf')) return 'vendor-jspdf';
-          if (normalizedId.includes('html2canvas')) return 'vendor-html2canvas';
-          if (normalizedId.includes('react-router-dom') || normalizedId.includes('react-router') || normalizedId.includes('@remix-run')) return 'vendor-router';
+          if (id.includes('framer-motion')) return 'vendor-motion'
+          if (id.includes('firebase')) return 'vendor-firebase'
+          if (id.includes('recharts')) return 'vendor-charts'
         },
       },
     },
