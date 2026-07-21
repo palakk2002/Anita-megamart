@@ -50,11 +50,18 @@ export function describePushSupport() {
   const isSafari = /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/i.test(ua);
   const isStandalone = window.matchMedia?.("(display-mode: standalone)")?.matches || navigator.standalone === true;
 
-  if (isIOS && isSafari && !isStandalone) {
+  if (typeof window.Notification === "undefined") {
+    if (isIOS && isSafari && !isStandalone) {
+      return {
+        supported: false,
+        reason: "ios-safari-not-standalone",
+        message: "On iPhone/iPad Safari, push notifications work only after installing the app to Home Screen.",
+      };
+    }
     return {
       supported: false,
-      reason: "ios-safari-not-standalone",
-      message: "On iPhone/iPad Safari, push notifications work only after installing the app to Home Screen.",
+      reason: "no-notification-api",
+      message: "Push notifications are not supported in this browser.",
     };
   }
 

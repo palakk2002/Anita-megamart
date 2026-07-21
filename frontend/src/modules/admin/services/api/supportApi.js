@@ -26,6 +26,10 @@ export const adminSupportApi = {
         axiosInstance.put(`/notifications/${id}/read`),
     markAllNotificationsRead: () =>
         axiosInstance.put('/notifications/mark-all-read'),
+    deleteNotification: (id) =>
+        axiosInstance.delete(`/notifications/${id}`),
+    clearAllNotifications: () =>
+        axiosInstance.delete('/notifications?clearAll=true'),
     broadcastNotification: (data) =>
         axiosInstance.post('/notifications/broadcast', data),
     getBroadcastAudienceStats: () =>

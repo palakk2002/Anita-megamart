@@ -66,7 +66,10 @@ const CATEGORIES = [
 ];
 
 const CustomerAuth = () => {
-    const [isLogin, setIsLogin] = useState(true);
+    const [isLogin, setIsLogin] = useState(() => {
+        const savedIsLogin = sessionStorage.getItem('auth_isLogin');
+        return savedIsLogin !== null ? savedIsLogin === 'true' : true;
+    });
     const [isLoading, setIsLoading] = useState(false);
     const [showOtp, setShowOtp] = useState(false);
     const [timer, setTimer] = useState(0);
@@ -77,11 +80,19 @@ const CustomerAuth = () => {
     const logoUrl = settings?.logoUrl || '';
     const navigate = useNavigate();
 
-    const [formData, setFormData] = useState({
-        phone: '',
-        otp: '',
-        name: ''
+    const [formData, setFormData] = useState(() => {
+        return {
+            phone: sessionStorage.getItem('auth_phone') || '',
+            otp: '',
+            name: sessionStorage.getItem('auth_name') || ''
+        };
     });
+
+    useEffect(() => {
+        sessionStorage.setItem('auth_phone', formData.phone);
+        sessionStorage.setItem('auth_name', formData.name);
+        sessionStorage.setItem('auth_isLogin', isLogin);
+    }, [formData.phone, formData.name, isLogin]);
 
     const activeCategory = CATEGORIES[carouselIndex];
 
@@ -102,8 +113,9 @@ const CustomerAuth = () => {
 
     const handleSendOtp = async (e) => {
         e?.preventDefault();
-        if (formData.phone.length !== 10) {
-            toast.error('Enter valid 10-digit number');
+        const phoneRegex = /^[6-9]\d{9}$/;
+        if (!phoneRegex.test(formData.phone)) {
+            toast.error('Enter valid 10-digit Indian mobile number');
             return;
         }
         setIsLoading(true);
@@ -148,6 +160,9 @@ const CustomerAuth = () => {
             });
             const { token, customer } = response.data.result;
             login({ ...customer, token, role: 'customer' });
+            sessionStorage.removeItem('auth_phone');
+            sessionStorage.removeItem('auth_name');
+            sessionStorage.removeItem('auth_isLogin');
             toast.success('Successfully Logged In!');
             navigate('/');
         } catch (error) {
@@ -208,7 +223,7 @@ const CustomerAuth = () => {
             </div>
 
             {/* Premium Centered Card Container */}
-            <div className="w-[92%] max-w-[400px] h-[85vh] max-h-[780px] bg-white relative z-10 overflow-hidden rounded-[40px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] border border-white/40 flex flex-col transition-colors duration-1000">
+            <div className="w-full sm:w-[92%] max-w-[400px] h-[100dvh] sm:h-[85vh] sm:max-h-[780px] bg-white relative z-10 overflow-hidden sm:rounded-[40px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] border border-white/40 flex flex-col transition-colors duration-1000">
 
                 {/* Scrollable Content Container */}
                 <div className="h-full overflow-y-auto no-scrollbar pb-20">
@@ -217,7 +232,7 @@ const CustomerAuth = () => {
                     <motion.div
                         animate={{ backgroundColor: activeCategory.theme }}
                         transition={{ duration: 1 }}
-                        className="relative h-[35%] w-full overflow-hidden"
+                        className="relative h-[240px] shrink-0 w-full overflow-hidden"
                     >
                         <AnimatePresence mode="wait">
                             <motion.div
@@ -349,10 +364,11 @@ const CustomerAuth = () => {
                                                 <input
                                                     required
                                                     name="name"
+                                                    value={formData.name}
                                                     placeholder="Full Name"
                                                     className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold text-gray-800 outline-none focus:bg-white transition-all"
                                                     style={{ '--theme-color': activeCategory.theme }}
-                                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                                    onChange={(e) => setFormData({ ...formData, name: e.target.value.replace(/[^a-zA-Z\s]/g, '') })}
                                                     onFocus={(e) => e.target.style.borderColor = activeCategory.theme}
                                                     onBlur={(e) => e.target.style.borderColor = '#F3F4F6'}
                                                 />
@@ -369,9 +385,10 @@ const CustomerAuth = () => {
                                                 required
                                                 name="phone"
                                                 maxLength={10}
+                                                value={formData.phone}
                                                 placeholder="Mobile Number"
                                                 className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-20 pr-4 py-4 text-sm font-bold text-gray-800 outline-none focus:bg-white transition-all"
-                                                onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '') })}
+                                                onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '').replace(/^[^6-9]+/, '') })}
                                                 onFocus={(e) => e.target.style.borderColor = activeCategory.theme}
                                                 onBlur={(e) => e.target.style.borderColor = '#F3F4F6'}
                                             />
@@ -394,21 +411,25 @@ const CustomerAuth = () => {
                                             By continuing, you agree to our
                                         </p>
                                         <div className="flex items-center gap-1.5 underline decoration-gray-200 underline-offset-4">
-                                            <button 
-                                                onClick={() => navigate('/terms')}
+                                            <a 
+                                                href="/terms"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
                                                 className="text-[10px] font-black uppercase tracking-widest hover:text-gray-900 transition-colors"
                                                 style={{ color: activeCategory.theme }}
                                             >
                                                 Terms & Condition
-                                            </button>
+                                            </a>
                                             <span className="text-[8px] text-gray-300">•</span>
-                                            <button 
-                                                onClick={() => navigate('/privacy-policy')}
+                                            <a 
+                                                href="/privacy"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
                                                 className="text-[10px] font-black uppercase tracking-widest hover:text-gray-900 transition-colors"
                                                 style={{ color: activeCategory.theme }}
                                             >
                                                 Privacy Policy
-                                            </button>
+                                            </a>
                                         </div>
                                     </div>
                                 </motion.div>

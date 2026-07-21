@@ -73,6 +73,20 @@ const AddressesPage = () => {
     const [selectedAddress, setSelectedAddress] = useState(null);
     const [saving, setSaving] = useState(false);
 
+    const handleFieldChange = (formSetter, field, value) => {
+        let newValue = value;
+        if (field === 'name' || field === 'city' || field === 'state') {
+            newValue = newValue.replace(/[^a-zA-Z\s]/g, '');
+        } else if (field === 'phone') {
+            newValue = newValue.replace(/\D/g, '').slice(0, 10);
+        } else if (field === 'address' || field === 'landmark') {
+            newValue = newValue.replace(/[^a-zA-Z0-9\s,./-]/g, '');
+        } else if (field === 'pincode') {
+            newValue = newValue.replace(/\D/g, '').slice(0, 6);
+        }
+        formSetter(f => ({ ...f, [field]: newValue }));
+    };
+
     const [addForm, setAddForm] = useState({
         type: 'home',
         name: '',
@@ -376,15 +390,15 @@ const AddressesPage = () => {
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="name">Full Name</Label>
-                            <Input id="name" placeholder="John Doe" value={addForm.name} onChange={e => setAddForm(f => ({ ...f, name: e.target.value }))} />
+                            <Input id="name" placeholder="John Doe" value={addForm.name} onChange={e => handleFieldChange(setAddForm, 'name', e.target.value)} />
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="phone">Phone Number</Label>
-                            <Input id="phone" placeholder="+91 98765 43210" value={addForm.phone} onChange={e => setAddForm(f => ({ ...f, phone: e.target.value }))} />
+                            <Input id="phone" placeholder="+91 98765 43210" value={addForm.phone} onChange={e => handleFieldChange(setAddForm, 'phone', e.target.value)} />
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="address">Address</Label>
-                            <Textarea id="address" placeholder="Flat No, Building, Street" value={addForm.address} onChange={e => setAddForm(f => ({ ...f, address: e.target.value }))} />
+                            <Textarea id="address" placeholder="Flat No, Building, Street" value={addForm.address} onChange={e => handleFieldChange(setAddForm, 'address', e.target.value)} />
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="landmark">Nearest Landmark (optional)</Label>
@@ -392,22 +406,22 @@ const AddressesPage = () => {
                                 id="landmark"
                                 placeholder="Near City Mall, Opp. Temple"
                                 value={addForm.landmark}
-                                onChange={e => setAddForm(f => ({ ...f, landmark: e.target.value }))}
+                                onChange={e => handleFieldChange(setAddForm, 'landmark', e.target.value)}
                             />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="grid gap-2">
                                 <Label htmlFor="city">City</Label>
-                                <Input id="city" placeholder="New Delhi" value={addForm.city} onChange={e => setAddForm(f => ({ ...f, city: e.target.value }))} />
+                                <Input id="city" placeholder="New Delhi" value={addForm.city} onChange={e => handleFieldChange(setAddForm, 'city', e.target.value)} />
                             </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="state">State</Label>
-                                <Input id="state" placeholder="Delhi" value={addForm.state} onChange={e => setAddForm(f => ({ ...f, state: e.target.value }))} />
+                                <Input id="state" placeholder="Delhi" value={addForm.state} onChange={e => handleFieldChange(setAddForm, 'state', e.target.value)} />
                             </div>
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="pincode">Pincode</Label>
-                            <Input id="pincode" placeholder="110075" value={addForm.pincode} onChange={e => setAddForm(f => ({ ...f, pincode: e.target.value }))} />
+                            <Input id="pincode" placeholder="110075" value={addForm.pincode} onChange={e => handleFieldChange(setAddForm, 'pincode', e.target.value)} />
                         </div>
                     </div>
                     <DialogFooter>
@@ -437,15 +451,15 @@ const AddressesPage = () => {
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="edit-name">Full Name</Label>
-                            <Input id="edit-name" value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} />
+                            <Input id="edit-name" value={editForm.name} onChange={e => handleFieldChange(setEditForm, 'name', e.target.value)} />
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="edit-phone">Phone Number</Label>
-                            <Input id="edit-phone" value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} />
+                            <Input id="edit-phone" value={editForm.phone} onChange={e => handleFieldChange(setEditForm, 'phone', e.target.value)} />
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="edit-address">Address</Label>
-                            <Textarea id="edit-address" value={editForm.address} onChange={e => setEditForm(f => ({ ...f, address: e.target.value }))} />
+                            <Textarea id="edit-address" value={editForm.address} onChange={e => handleFieldChange(setEditForm, 'address', e.target.value)} />
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="edit-landmark">Nearest Landmark (optional)</Label>
@@ -453,22 +467,22 @@ const AddressesPage = () => {
                                 id="edit-landmark"
                                 placeholder="Near City Mall, Opp. Temple"
                                 value={editForm.landmark}
-                                onChange={e => setEditForm(f => ({ ...f, landmark: e.target.value }))}
+                                onChange={e => handleFieldChange(setEditForm, 'landmark', e.target.value)}
                             />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="grid gap-2">
                                 <Label htmlFor="edit-city">City</Label>
-                                <Input id="edit-city" placeholder="New Delhi" value={editForm.city} onChange={e => setEditForm(f => ({ ...f, city: e.target.value }))} />
+                                <Input id="edit-city" placeholder="New Delhi" value={editForm.city} onChange={e => handleFieldChange(setEditForm, 'city', e.target.value)} />
                             </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="edit-state">State</Label>
-                                <Input id="edit-state" placeholder="Delhi" value={editForm.state} onChange={e => setEditForm(f => ({ ...f, state: e.target.value }))} />
+                                <Input id="edit-state" placeholder="Delhi" value={editForm.state} onChange={e => handleFieldChange(setEditForm, 'state', e.target.value)} />
                             </div>
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="edit-pincode">Pincode</Label>
-                            <Input id="edit-pincode" placeholder="110075" value={editForm.pincode} onChange={e => setEditForm(f => ({ ...f, pincode: e.target.value }))} />
+                            <Input id="edit-pincode" placeholder="110075" value={editForm.pincode} onChange={e => handleFieldChange(setEditForm, 'pincode', e.target.value)} />
                         </div>
                     </div>
                     <DialogFooter>

@@ -116,9 +116,9 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="bg-gray-50/50 min-h-screen pb-24 relative overflow-hidden font-sans">
+    <div className="bg-gray-50/50 min-h-screen pb-24 pt-[104px] relative font-sans">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 px-6 pt-12 pb-4 flex justify-between items-center sticky top-0 z-30 transition-all duration-300">
+      <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 px-6 pt-12 pb-4 flex justify-between items-center fixed top-0 w-full max-w-md inset-x-0 mx-auto z-30 transition-all duration-300">
         <div className="flex items-center space-x-3">
           <div
             className="w-12 h-12 rounded-full overflow-hidden border-2 border-primary ring-2 ring-primary/20 shadow-sm cursor-pointer"
@@ -132,7 +132,7 @@ const Dashboard = () => {
           <div
             onClick={() => navigate("/delivery/profile")}
             className="cursor-pointer">
-            <h2 className="ds-h2 leading-tight">
+            <h2 className="ds-h2 leading-tight capitalize">
               {user?.name || "Delivery Partner"}
             </h2>
             <div className="flex items-center text-sm font-medium">

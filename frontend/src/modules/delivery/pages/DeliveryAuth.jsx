@@ -213,8 +213,15 @@ const DeliveryAuth = () => {
   };
 
   const handleKeyDown = (index, e) => {
-    if (e.key === "Backspace" && !otp[index] && index > 0) {
-      document.getElementById(`otp-${index - 1}`)?.focus();
+    if (e.key === "Backspace") {
+      if (!otp[index] && index > 0) {
+        document.getElementById(`otp-${index - 1}`)?.focus();
+      } else if (otp[index] && e.target.selectionStart === 0 && e.target.selectionEnd === 0) {
+        e.preventDefault();
+        const newOtp = [...otp];
+        newOtp[index] = "";
+        setOtp(newOtp);
+      }
     }
   };
 
@@ -263,24 +270,24 @@ const DeliveryAuth = () => {
         className="w-full max-w-[420px] relative z-10"
       >
         {/* Card */}
-        <div className="bg-white rounded-[2.5rem] shadow-[0_24px_60px_rgba(99,102,241,0.1)] border border-brand-50 overflow-hidden">
+        <div className="bg-white rounded-[2.5rem] shadow-[0_24px_60px_rgba(99,102,241,0.1)] border border-brand-50 overflow-hidden flex flex-col max-h-[85vh]">
 
           {/* Header with Lottie */}
-          <div className="bg-gradient-to-br from-brand-50 to-purple-50 p-8 flex flex-col items-center relative">
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
-              <div className="w-14 h-14 rounded-2xl bg-white/85 backdrop-blur-sm border border-brand-100 shadow-sm flex items-center justify-center overflow-hidden">
+          <div className="bg-gradient-to-br from-brand-50 to-purple-50 p-8 pt-10 flex flex-col items-center relative shrink-0">
+            <div className="z-10 mb-2">
+              <div className="w-20 h-20 rounded-2xl bg-white/90 backdrop-blur-sm border border-brand-100 shadow-sm flex items-center justify-center overflow-hidden p-2">
                 {logoUrl ? (
                   <img
                     src={logoUrl}
                     alt={`${appName} logo`}
-                    className="w-10 h-10 object-contain"
+                    className="w-full h-full object-contain"
                   />
                 ) : (
-                  <ShieldCheck className="w-5 h-5 text-brand-600" />
+                  <ShieldCheck className="w-8 h-8 text-brand-600" />
                 )}
               </div>
             </div>
-            <div className="w-40 h-40">
+            <div className="w-40 h-40 -mt-4">
               <Lottie animationData={deliveryRiding} loop />
             </div>
             <AnimatePresence mode="wait">
@@ -311,7 +318,7 @@ const DeliveryAuth = () => {
 
           {/* Tab Switch */}
           {step === "form" && (
-            <div className="flex mx-6 mt-6 bg-gray-100 rounded-2xl p-1">
+            <div className="flex mx-6 mt-6 bg-gray-100 rounded-2xl p-1 shrink-0">
               {["login", "signup"].map((m) => (
                 <button
                   key={m}
@@ -328,7 +335,7 @@ const DeliveryAuth = () => {
           )}
 
           {/* Form Body */}
-          <div className="p-6 pt-4">
+          <div className="p-6 pt-4 overflow-y-auto shrink-1">
             <AnimatePresence mode="wait">
               {step === "form" && (
                 <motion.div
@@ -391,7 +398,7 @@ const DeliveryAuth = () => {
                               <input
                                 type="text"
                                 value={signupName}
-                                onChange={(e) => setSignupName(e.target.value)}
+                                onChange={(e) => setSignupName(e.target.value.replace(/[^a-zA-Z\s]/g, ""))}
                                 className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all"
                                 placeholder="Enter your full name"
                               />
@@ -406,7 +413,7 @@ const DeliveryAuth = () => {
                               <input
                                 type="tel"
                                 value={signupPhone}
-                                onChange={(e) => setSignupPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                                onChange={(e) => setSignupPhone(e.target.value.replace(/\D/g, "").replace(/^[^6-9]+/, "").slice(0, 10))}
                                 maxLength={10}
                                 className="w-full pl-24 pr-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all"
                                 placeholder="00000 00000"
@@ -447,8 +454,12 @@ const DeliveryAuth = () => {
                                 toast.error("Please fill all personal information fields and upload photo");
                                 return;
                               }
-                              if (signupPhone.length !== 10) {
-                                toast.error("Please enter a valid 10-digit phone number");
+                              if (signupPhone.length !== 10 || !/^[6-9]/.test(signupPhone)) {
+                                toast.error("Please enter a valid 10-digit Indian mobile number");
+                                return;
+                              }
+                              if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signupEmail)) {
+                                toast.error("Please enter a valid email address");
                                 return;
                               }
                               setSignupStep(2);
@@ -509,7 +520,7 @@ const DeliveryAuth = () => {
                               <input
                                 type="text"
                                 value={signupVehicleNumber}
-                                onChange={(e) => setSignupVehicleNumber(e.target.value.toUpperCase())}
+                                onChange={(e) => setSignupVehicleNumber(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10))}
                                 className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all"
                                 placeholder="KA 05 MN 8921"
                               />
@@ -523,7 +534,7 @@ const DeliveryAuth = () => {
                               <input
                                 type="text"
                                 value={signupDLNumber}
-                                onChange={(e) => setSignupDLNumber(e.target.value.toUpperCase())}
+                                onChange={(e) => setSignupDLNumber(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 16))}
                                 className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all"
                                 placeholder="DL-1420110012345"
                               />
@@ -589,7 +600,7 @@ const DeliveryAuth = () => {
                             <input
                               type="text"
                               value={signupAccountHolder}
-                              onChange={(e) => setSignupAccountHolder(e.target.value.toUpperCase())}
+                              onChange={(e) => setSignupAccountHolder(e.target.value.toUpperCase().replace(/[^A-Z\s]/g, ""))}
                               className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all"
                               placeholder="AS PER BANK RECORDS"
                             />
@@ -599,7 +610,7 @@ const DeliveryAuth = () => {
                             <input
                               type="text"
                               value={signupAccountNumber}
-                              onChange={(e) => setSignupAccountNumber(e.target.value.replace(/\D/g, ""))}
+                              onChange={(e) => setSignupAccountNumber(e.target.value.replace(/\D/g, "").slice(0, 18))}
                               className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all"
                               placeholder="000000000000"
                             />
@@ -609,7 +620,7 @@ const DeliveryAuth = () => {
                             <input
                               type="text"
                               value={signupIfsc}
-                              onChange={(e) => setSignupIfsc(e.target.value.toUpperCase())}
+                              onChange={(e) => setSignupIfsc(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 11))}
                               className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all"
                               placeholder="HDFC0001234"
                             />
@@ -845,9 +856,9 @@ const DeliveryAuth = () => {
 
                       <p className="text-center text-xs text-gray-400 font-semibold pt-1">
                         By joining, you agree to our{" "}
-                        <span className="text-brand-500 font-bold cursor-pointer hover:underline">Terms</span>{" "}
+                        <a href="/terms?from=delivery" target="_blank" rel="opener" className="text-brand-500 font-bold cursor-pointer hover:underline">Terms &amp; Conditions</a>{" "}
                         &amp;{" "}
-                        <span className="text-brand-500 font-bold cursor-pointer hover:underline">Privacy Policy</span>
+                        <a href="/privacy?from=delivery" target="_blank" rel="opener" className="text-brand-500 font-bold cursor-pointer hover:underline">Privacy Policy</a>
                       </p>
                     </div>
                   )}
@@ -869,7 +880,7 @@ const DeliveryAuth = () => {
                             type="tel"
                             value={loginPhone}
                             onChange={(e) => {
-                              const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                              const val = e.target.value.replace(/\D/g, "").replace(/^[^6-9]+/, "").slice(0, 10);
                               setLoginPhone(val);
                             }}
                             maxLength={10}
@@ -890,6 +901,14 @@ const DeliveryAuth = () => {
                           <>Login Now <ArrowRight className="w-4 h-4" /></>
                         )}
                       </button>
+
+                      {/* Legal Agreement Footer for Login */}
+                      <p className="text-center text-xs text-gray-400 font-semibold pt-4">
+                        By logging in, you agree to our{" "}
+                        <a href="/terms?from=delivery" target="_blank" rel="opener" className="text-brand-500 font-bold cursor-pointer hover:underline">Terms &amp; Conditions</a>{" "}
+                        &amp;{" "}
+                        <a href="/privacy?from=delivery" target="_blank" rel="opener" className="text-brand-500 font-bold cursor-pointer hover:underline">Privacy Policy</a>
+                      </p>
                     </div>
                   )}
                 </motion.div>
@@ -920,6 +939,7 @@ const DeliveryAuth = () => {
                           value={digit}
                           onChange={(e) => handleOtpChange(index, e.target.value)}
                           onKeyDown={(e) => handleKeyDown(index, e)}
+                          onFocus={(e) => e.target.select()}
                           className="w-14 h-14 text-center text-2xl font-black border-2 border-gray-100 rounded-2xl focus:border-brand-500 focus:ring-4 focus:ring-brand-100 outline-none transition-all bg-gray-50 text-gray-900"
                         />
                       ))}
@@ -951,10 +971,10 @@ const DeliveryAuth = () => {
                       onChange={(e) => setAgreed(e.target.checked)}
                       className="mt-0.5 h-4 w-4 accent-brand-600 cursor-pointer"
                     />
-                    <label htmlFor="terms" className="text-xs text-gray-500 leading-relaxed cursor-pointer">
+                    <label htmlFor="terms" className="text-xs text-gray-500 leading-relaxed cursor-pointer select-none">
                       I confirm my phone number is correct and I agree to the{" "}
-                      <span className="text-brand-600 font-bold">Terms of Service</span> &amp;{" "}
-                      <span className="text-brand-600 font-bold">Privacy Policy</span>.
+                      <a href="/terms?from=delivery" target="_blank" rel="opener" onClick={(e) => e.stopPropagation()} className="text-brand-600 font-bold hover:underline cursor-pointer">Terms &amp; Conditions</a> &amp;{" "}
+                      <a href="/privacy?from=delivery" target="_blank" rel="opener" onClick={(e) => e.stopPropagation()} className="text-brand-600 font-bold hover:underline cursor-pointer">Privacy Policy</a>.
                     </label>
                   </div>
 
@@ -985,12 +1005,12 @@ const DeliveryAuth = () => {
         </div>
 
         {/* Footer */}
-        <div className="mt-6 flex items-center justify-center gap-3 opacity-40">
+        <div className="mt-6 flex items-center justify-center gap-3 opacity-70">
           <span className="h-px w-8 bg-gray-400" />
           <ShieldCheck className="text-gray-500 w-4 h-4" />
           <span className="h-px w-8 bg-gray-400" />
         </div>
-        <p className="text-center text-[10px] font-black text-gray-300 uppercase tracking-[4px] mt-2">
+        <p className="text-center text-[10px] font-black text-gray-500 uppercase tracking-[4px] mt-2">
           {appName} Partner Ecosystem • v1.0
         </p>
       </motion.div>

@@ -88,9 +88,9 @@ const Withdrawals = () => {
     };
 
     return (
-        <div className="bg-gray-50/50 min-h-screen pb-24">
+        <div className="bg-gray-50/50 min-h-screen pb-24 pt-[72px]">
             {/* Top Header */}
-            <div className="bg-white px-6 py-4 flex items-center shadow-sm sticky top-0 z-50">
+            <div className="bg-white px-6 py-4 flex items-center shadow-sm fixed top-0 w-full max-w-md inset-x-0 mx-auto z-50">
                 <button
                     onClick={() => navigate(-1)}
                     className="p-2 -ml-2 rounded-full hover:bg-gray-100 transition-colors mr-2"

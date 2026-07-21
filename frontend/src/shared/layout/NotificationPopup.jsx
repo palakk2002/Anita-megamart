@@ -1,10 +1,10 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { HiOutlineBell, HiOutlineCheckCircle, HiOutlineExclamationCircle, HiOutlineClock } from 'react-icons/hi2';
+import { HiOutlineBell, HiOutlineCheckCircle, HiOutlineExclamationCircle, HiOutlineClock, HiOutlineTrash, HiOutlineXMark } from 'react-icons/hi2';
 import { cn } from '@/lib/utils';
 import Button from '@shared/components/ui/Button';
 
-const NotificationPopup = ({ notifications, onMarkAsRead, onMarkAllAsRead, onClose }) => {
+const NotificationPopup = ({ notifications, onMarkAsRead, onMarkAllAsRead, onDelete, onClearAll, onClose }) => {
     return (
         <motion.div
             initial={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -21,12 +21,21 @@ const NotificationPopup = ({ notifications, onMarkAsRead, onMarkAllAsRead, onClo
                     <h3 className="text-sm font-black text-slate-900 tracking-tight">Notifications</h3>
                 </div>
                 {notifications.length > 0 && (
-                    <button
-                        onClick={onMarkAllAsRead}
-                        className="text-[10px] font-black text-primary hover:text-primary/80 uppercase tracking-widest transition-colors"
-                    >
-                        Mark all as read
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={onMarkAllAsRead}
+                            className="text-[10px] font-black text-primary hover:text-primary/80 uppercase tracking-widest transition-colors"
+                        >
+                            Mark all as read
+                        </button>
+                        <button
+                            onClick={onClearAll}
+                            className="text-[10px] font-black text-rose-500 hover:text-rose-600 uppercase tracking-widest transition-colors flex items-center gap-1"
+                        >
+                            <HiOutlineTrash className="h-3 w-3" />
+                            Clear All
+                        </button>
+                    </div>
                 )}
             </div>
 
@@ -59,7 +68,7 @@ const NotificationPopup = ({ notifications, onMarkAsRead, onMarkAllAsRead, onClo
                                                 notif.type === 'payment' ? <HiOutlineClock size={20} /> :
                                                     <HiOutlineExclamationCircle size={20} />}
                                         </div>
-                                        <div className="flex-1">
+                                        <div className="flex-1 pr-6">
                                             <div className="flex items-center justify-between mb-1">
                                                 <p className={cn(
                                                     "text-xs font-black tracking-tight",
@@ -75,6 +84,15 @@ const NotificationPopup = ({ notifications, onMarkAsRead, onMarkAllAsRead, onClo
                                                 {messageText}
                                             </p>
                                         </div>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onDelete(notificationId);
+                                            }}
+                                            className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all"
+                                        >
+                                            <HiOutlineXMark className="h-4 w-4" />
+                                        </button>
                                     </div>
                                 </div>
                             );
@@ -94,7 +112,7 @@ const NotificationPopup = ({ notifications, onMarkAsRead, onMarkAllAsRead, onClo
             <div className="p-3 bg-slate-50/50 border-t border-gray-50 text-center flex-shrink-0">
                 <button
                     onClick={onClose}
-                    className="text-[10px] font-black text-slate-400 hover:text-slate-900 uppercase tracking-widest transition-colors"
+                    className="w-full py-3 bg-slate-200/50 hover:bg-slate-200 text-[10px] font-black text-slate-500 hover:text-slate-800 uppercase tracking-widest rounded-xl transition-all"
                 >
                     Close Panel
                 </button>

@@ -288,6 +288,36 @@ export const markNotificationsRead = async (req, res) => {
   }
 };
 
+export const deleteNotification = async (req, res) => {
+  try {
+    const userId = req?.user?.id;
+    if (!userId) {
+      return handleResponse(res, 401, "Unauthorized");
+    }
+
+    const notificationId = String(
+      req.body?.notificationId || req.params?.id || "",
+    ).trim();
+    const clearAll = String(req.body?.clearAll || req.query?.clearAll || "").toLowerCase() === "true";
+
+    const filter =
+      clearAll || !notificationId
+        ? { $or: [{ userId }, { recipient: userId }] }
+        : {
+            _id: notificationId,
+            $or: [{ userId }, { recipient: userId }],
+          };
+
+    const result = await Notification.deleteMany(filter);
+
+    return handleResponse(res, 200, "Notifications deleted successfully", {
+      deletedCount: Number(result.deletedCount || 0),
+    });
+  } catch (error) {
+    return handleResponse(res, 500, error.message);
+  }
+};
+
 export const getNotificationPreferences = async (req, res) => {
   try {
     const userId = req?.user?.id;
@@ -572,6 +602,7 @@ export const getBroadcastAudienceStats = async (req, res) => {
   }
 };
 
+
 export default {
   registerPushToken,
   removePushToken,
@@ -583,4 +614,5 @@ export default {
   getTestPushNotificationStatus,
   broadcastNotification,
   getBroadcastAudienceStats,
+  deleteNotification,
 };

@@ -19,6 +19,36 @@ const BankAccount = () => {
     ifsc: "",
   });
 
+  const [errors, setErrors] = useState({});
+
+  const validate = () => {
+    const newErrors = {};
+    if (!editForm.accountHolder.trim()) {
+      newErrors.accountHolder = "Account holder name is required";
+    }
+    if (!editForm.accountNumber.trim()) {
+      newErrors.accountNumber = "Account number is required";
+    } else {
+      const accRegex = /^\d{9,18}$/;
+      if (!accRegex.test(editForm.accountNumber.trim())) {
+        newErrors.accountNumber = "Account number must be 9 to 18 digits";
+      }
+    }
+    if (editForm.accountNumber !== editForm.confirmAccountNumber) {
+      newErrors.confirmAccountNumber = "Account numbers do not match";
+    }
+    if (!editForm.ifsc.trim()) {
+      newErrors.ifsc = "IFSC Code is required";
+    } else {
+      const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+      if (!ifscRegex.test(editForm.ifsc.trim())) {
+        newErrors.ifsc = "Invalid IFSC Code (e.g., HDFC0123456)";
+      }
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   useEffect(() => {
     if (user) {
       setEditForm((prev) => ({
@@ -42,17 +72,8 @@ const BankAccount = () => {
   };
 
   const handleUpdate = async () => {
-    if (!editForm.accountHolder.trim()) {
-      return toast.error("Account holder name is required");
-    }
-    if (!editForm.accountNumber.trim()) {
-      return toast.error("Account number is required");
-    }
-    if (editForm.accountNumber !== editForm.confirmAccountNumber) {
-      return toast.error("Account numbers do not match");
-    }
-    if (!editForm.ifsc.trim()) {
-      return toast.error("IFSC Code is required");
+    if (!validate()) {
+      return toast.error("Please fix the errors before updating");
     }
 
     try {
@@ -79,9 +100,9 @@ const BankAccount = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
+    <div className="min-h-screen bg-gray-50 pb-48 pt-[72px]">
       {/* Header */}
-      <div className="bg-white shadow-sm sticky top-0 z-10">
+      <div className="bg-white shadow-sm fixed top-0 w-full max-w-md inset-x-0 mx-auto z-30">
         <div className="flex items-center p-4">
           <button 
             onClick={() => navigate(-1)} 
@@ -142,29 +163,48 @@ const BankAccount = () => {
               label="Account Holder Name" 
               placeholder="Enter name"
               value={editForm.accountHolder}
-              onChange={(e) => setEditForm({ ...editForm, accountHolder: e.target.value })}
+              onChange={(e) => {
+                setEditForm({ ...editForm, accountHolder: e.target.value });
+                if (errors.accountHolder) setErrors({ ...errors, accountHolder: null });
+              }}
               icon={CreditCard}
+              error={errors.accountHolder}
             />
             <Input 
               label="New Account Number" 
               placeholder="Enter account number" 
               value={editForm.accountNumber}
-              onChange={(e) => setEditForm({ ...editForm, accountNumber: e.target.value })}
+              onChange={(e) => {
+                setEditForm({ ...editForm, accountNumber: e.target.value.replace(/\D/g, '') });
+                if (errors.accountNumber) setErrors({ ...errors, accountNumber: null });
+              }}
               icon={CreditCard}
+              maxLength={18}
+              error={errors.accountNumber}
             />
             <Input 
               label="Confirm Account Number" 
               placeholder="Re-enter account number" 
               value={editForm.confirmAccountNumber}
-              onChange={(e) => setEditForm({ ...editForm, confirmAccountNumber: e.target.value })}
+              onChange={(e) => {
+                setEditForm({ ...editForm, confirmAccountNumber: e.target.value.replace(/\D/g, '') });
+                if (errors.confirmAccountNumber) setErrors({ ...errors, confirmAccountNumber: null });
+              }}
               icon={CreditCard}
+              maxLength={18}
+              error={errors.confirmAccountNumber}
             />
             <Input 
               label="IFSC Code" 
               placeholder="Enter IFSC code" 
               value={editForm.ifsc}
-              onChange={(e) => setEditForm({ ...editForm, ifsc: e.target.value })}
+              onChange={(e) => {
+                setEditForm({ ...editForm, ifsc: e.target.value.toUpperCase() });
+                if (errors.ifsc) setErrors({ ...errors, ifsc: null });
+              }}
               icon={Landmark}
+              maxLength={11}
+              error={errors.ifsc}
             />
             <Button className="w-full mt-2" onClick={handleUpdate}>
               Verify & Update

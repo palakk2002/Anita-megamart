@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "@core/context/AuthContext";
 import { useSettings } from "@core/context/SettingsContext";
 import { UserRole } from "@core/constants/roles";
@@ -48,10 +48,32 @@ const REQUIRED_DOCUMENT_CONFIG = [
 ];
 
 const Auth = () => {
-  const [isLogin, setIsLogin] = useState(true);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const isLogin = searchParams.get("mode") !== "register";
+  const signupStep = parseInt(searchParams.get("step") || "1", 10);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [signupStep, setSignupStep] = useState(1);
+
+  const setIsLogin = (newIsLoginOrFn) => {
+    const nextIsLogin = typeof newIsLoginOrFn === "function" ? newIsLoginOrFn(isLogin) : newIsLoginOrFn;
+    const nextParams = new URLSearchParams(searchParams);
+    if (nextIsLogin) {
+      nextParams.delete("mode");
+      nextParams.delete("step");
+    } else {
+      nextParams.set("mode", "register");
+      nextParams.set("step", "1");
+    }
+    setSearchParams(nextParams);
+  };
+
+  const setSignupStep = (newStepOrFn) => {
+    const nextStep = typeof newStepOrFn === "function" ? newStepOrFn(signupStep) : newStepOrFn;
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("mode", "register");
+    nextParams.set("step", nextStep.toString());
+    setSearchParams(nextParams);
+  };
   const [isMapOpen, setIsMapOpen] = useState(false);
   const { login } = useAuth();
   const { settings } = useSettings();
@@ -142,8 +164,8 @@ const Auth = () => {
       }
       setFormData({ ...formData, [name]: cleaned });
     } else if (name === "phone") {
-      // Contact number: only digits, max 10 characters
-      const digitsOnly = value.replace(/[^0-9]/g, "").slice(0, 10);
+      // Contact number: only digits, max 10 characters, strictly starting with 6-9
+      const digitsOnly = value.replace(/[^0-9]/g, "").replace(/^[^6-9]+/, "").slice(0, 10);
       if (digitsOnly !== formData.phone) {
         resetVerificationState("phone");
       }
@@ -417,7 +439,7 @@ const Auth = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#fcfaff] p-6 font-['Outfit'] overflow-hidden relative">
+    <div className="flex flex-col min-h-[100dvh] items-center justify-center bg-[#fcfaff] p-4 py-16 md:p-6 md:py-6 font-['Outfit'] overflow-y-auto overflow-x-hidden md:overflow-hidden relative">
       {/* Elegant Ambient Background */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] left-[-5%] w-[60%] h-[60%] bg-slate-100/50 rounded-full blur-[120px]" />
@@ -427,9 +449,9 @@ const Auth = () => {
       <motion.div
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="relative z-10 w-full max-w-[1000px] min-h-[600px] max-h-[90vh] bg-white rounded-lg shadow-[0_50px_120px_rgba(0,0,0,0.04)] border border-white flex flex-col md:flex-row overflow-hidden">
+        className="relative z-10 w-full max-w-[1000px] min-h-[500px] md:min-h-[600px] md:max-h-[90vh] bg-white rounded-lg shadow-[0_50px_120px_rgba(0,0,0,0.04)] border border-white flex flex-col md:flex-row overflow-hidden shrink-0">
         {/* Visual Side Panel */}
-        <div className="hidden md:flex w-[45%] bg-linear-to-br from-slate-900 via-slate-950 to-black relative flex-col items-center justify-center p-10 overflow-hidden">
+        <div className="flex w-full md:w-[45%] shrink-0 min-h-[220px] md:min-h-0 bg-linear-to-br from-slate-900 via-slate-950 to-black relative flex-col items-center justify-center p-6 md:p-10 overflow-hidden">
           {/* Abstract Decorative Circles */}
           <div className="absolute inset-0 opacity-20">
             <div className="absolute top-0 left-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
@@ -442,7 +464,7 @@ const Auth = () => {
             transition={{ duration: 0.8 }}
             className="relative z-10 w-full flex flex-col items-center">
             {/* Lottie Animation for Seller */}
-            <div className="w-full max-w-[350px] drop-shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+            <div className="w-full max-w-[140px] md:max-w-[350px] drop-shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
               <Lottie
                 animationData={sellerAnimation}
                 loop={true}
@@ -450,24 +472,24 @@ const Auth = () => {
               />
             </div>
 
-            <div className="mt-8 text-center space-y-4">
-              <h2 className="text-2xl font-black text-white tracking-tight leading-tight uppercase underline decoration-white/20 underline-offset-8">
+            <div className="mt-4 md:mt-8 text-center space-y-4">
+              <h2 className="text-xl md:text-2xl font-black text-white tracking-tight leading-tight uppercase underline decoration-white/20 underline-offset-8">
                 Seller <span className="text-slate-600">Expansion.</span>
               </h2>
             </div>
           </motion.div>
 
           {/* Partner Badges */}
-          <div className="absolute bottom-12 left-0 right-0 px-12 flex justify-between items-center opacity-60">
-            <div className="flex items-center gap-2 text-white/80">
-              <Rocket size={16} />
-              <span className="text-[10px] font-black uppercase tracking-widest">
+          <div className="absolute bottom-4 md:bottom-12 left-0 right-0 px-6 md:px-12 flex justify-between items-center opacity-60">
+            <div className="flex items-center gap-1.5 md:gap-2 text-white/80">
+              <Rocket size={14} className="md:w-4 md:h-4" />
+              <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest">
                 Growth First
               </span>
             </div>
-            <div className="flex items-center gap-2 text-white/80">
-              <Globe size={16} />
-              <span className="text-[10px] font-black uppercase tracking-widest">
+            <div className="flex items-center gap-1.5 md:gap-2 text-white/80">
+              <Globe size={14} className="md:w-4 md:h-4" />
+              <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest">
                 Pan India
               </span>
             </div>
@@ -476,11 +498,11 @@ const Auth = () => {
 
         {/* Form Content Side */}
         <div
-          className="w-full md:w-[55%] min-h-0 p-8 pt-12 md:p-12 md:pt-16 flex flex-col justify-center bg-white overflow-y-auto overscroll-contain touch-pan-y custom-scrollbar relative"
+          className="w-full md:w-[55%] min-h-0 p-5 pt-8 md:p-12 md:pt-16 flex flex-col justify-center bg-white overflow-y-auto overscroll-contain touch-pan-y custom-scrollbar relative shrink-0"
           onWheelCapture={handlePanelWheel}
           style={{ WebkitOverflowScrolling: "touch" }}>
-          <div className="hidden md:flex absolute top-8 right-8 z-20">
-            <div className="w-20 h-20 rounded-2xl bg-slate-50 border border-slate-200 shadow-sm flex items-center justify-center overflow-hidden">
+          <div className="flex absolute top-4 right-4 md:top-8 md:right-8 z-20">
+            <div className="w-12 h-12 md:w-20 md:h-20 rounded-2xl bg-slate-50 border border-slate-200 shadow-sm flex items-center justify-center overflow-hidden">
               {logoUrl ? (
                 <img
                   src={logoUrl}
@@ -528,7 +550,7 @@ const Auth = () => {
                 {(isLogin || signupStep === 1) && (
                   <>
                     {!isLogin && (
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-4">
                         <div className="relative group">
                           <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-violet-600 transition-colors">
                             <User size={18} />
@@ -907,7 +929,7 @@ const Auth = () => {
                   {!isLogin && signupStep > 1 && (
                     <button
                       type="button"
-                      onClick={() => setSignupStep((prev) => Math.max(1, prev - 1))}
+                      onClick={() => navigate(-1)}
                       className="w-1/3 bg-slate-100 text-slate-600 rounded-lg py-4 text-sm font-black tracking-[2px] transition-all hover:bg-slate-200">
                       BACK
                     </button>
@@ -931,30 +953,39 @@ const Auth = () => {
                 </div>
               </form>
 
-              <div className="pt-1 border-t border-slate-50 flex flex-col items-center gap-1">
-                <p className="text-slate-600 font-bold text-sm">
-                  {isLogin ? "New to the platform?" : "Already part of us?"}{" "}
-                  <button
-                    onClick={() => {
-                      setIsLogin(!isLogin);
-                      setSignupStep(1);
-                      setVerifications({
-                        email: createInitialVerificationState(),
-                        phone: createInitialVerificationState(),
-                      });
-                    }}
-                    className="text-slate-900 hover:text-black transition-colors px-2">
-                    {isLogin ? "Register Store" : "Sign In"}
-                  </button>
-                </p>
-              </div>
+              {(isLogin || signupStep === 1) && (
+                <div className="pt-1 border-t border-slate-50 flex flex-col items-center gap-1">
+                  <p className="text-slate-600 font-bold text-sm">
+                    {isLogin ? "New to the platform?" : "Already part of us?"}{" "}
+                    <button
+                      onClick={() => {
+                        setIsLogin(!isLogin);
+                        setVerifications({
+                          email: createInitialVerificationState(),
+                          phone: createInitialVerificationState(),
+                        });
+                      }}
+                      className="text-slate-900 hover:text-black transition-colors px-2">
+                      {isLogin ? "Register Store" : "Sign In"}
+                    </button>
+                  </p>
+                  <div className="mt-4 text-center">
+                    <p className="text-xs text-slate-500 font-medium">
+                      By continuing, you agree to our{" "}
+                      <Link to="/terms" className="text-slate-700 hover:text-slate-900 underline transition-colors">Terms & Conditions</Link>
+                      {" "}and{" "}
+                      <Link to="/privacy" className="text-slate-700 hover:text-slate-900 underline transition-colors">Privacy Policy</Link>.
+                    </p>
+                  </div>
+                </div>
+              )}
             </motion.div>
           </AnimatePresence>
         </div>
       </motion.div>
 
       {/* Bottom Tagline */}
-      <div className="absolute bottom-6 flex items-center gap-4 text-slate-300 text-[10px] font-black uppercase tracking-[6px]">
+      <div className="relative mt-6 mb-2 md:mt-0 md:mb-0 md:absolute md:bottom-6 w-[90%] max-w-sm text-center text-slate-600 text-xs font-semibold bg-slate-100/50 backdrop-blur-sm px-6 py-2.5 rounded-full shadow-sm border border-slate-200/50 mx-auto shrink-0">
         Empowering Business Digitalization
       </div>
 

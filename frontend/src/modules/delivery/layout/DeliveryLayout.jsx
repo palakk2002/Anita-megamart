@@ -34,6 +34,13 @@ const DeliveryLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const mainRef = useRef(null);
+
+  useEffect(() => {
+    if (mainRef.current) {
+      mainRef.current.scrollTo(0, 0);
+    }
+  }, [location.pathname]);
 
   const [activeOrder, setActiveOrder] = useState(null);
   const [timeLeft, setTimeLeft] = useState(60);
@@ -907,6 +914,7 @@ const DeliveryLayout = () => {
         )}
 
       <main
+        ref={mainRef}
         className={`h-full min-h-screen overflow-y-auto ${shouldShowBottomNav ? "pb-24" : ""} no-scrollbar`}>
         <Outlet />
       </main>

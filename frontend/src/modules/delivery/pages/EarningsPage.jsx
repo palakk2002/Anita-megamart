@@ -82,8 +82,8 @@ const EarningsPage = () => {
   }
 
   return (
-    <div className="bg-gray-50/50 min-h-screen pb-24">
-      <div className="bg-white shadow-sm p-6 sticky top-0 z-30">
+    <div className="bg-gray-50/50 min-h-screen pb-24 pt-[148px]">
+      <div className="bg-white shadow-sm p-6 fixed top-0 w-full max-w-md inset-x-0 mx-auto z-30">
         <div className="flex justify-between items-center mb-4">
           <h1 className="ds-h2 text-gray-900">My Earnings</h1>
           <Button variant="ghost" size="icon">

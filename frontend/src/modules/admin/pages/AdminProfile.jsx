@@ -10,7 +10,9 @@ import {
     Camera,
     LogOut,
     Key,
-    X
+    X,
+    Eye,
+    EyeOff
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -33,6 +35,10 @@ const AdminProfile = () => {
         newPassword: '',
         confirmPassword: ''
     });
+
+    const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     useEffect(() => {
         fetchProfile();
@@ -194,7 +200,12 @@ const AdminProfile = () => {
                                         <input
                                             type="text"
                                             value={profile.name}
-                                            onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (/^[a-zA-Z\s]*$/.test(val)) {
+                                                    setProfile({ ...profile, name: val });
+                                                }
+                                            }}
                                             className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-brand-500/10 transition-all block"
                                             required
                                         />
@@ -206,7 +217,7 @@ const AdminProfile = () => {
                                             <input
                                                 type="email"
                                                 value={profile.email}
-                                                onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                                                onChange={(e) => setProfile({ ...profile, email: e.target.value.toLowerCase() })}
                                                 className="w-full pl-12 pr-5 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-brand-500/10 transition-all block"
                                                 required
                                             />
@@ -244,12 +255,19 @@ const AdminProfile = () => {
                                     <div className="relative group">
                                         <Key className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                                         <input
-                                            type="password"
+                                            type={showCurrentPassword ? "text" : "password"}
                                             value={security.currentPassword}
                                             onChange={(e) => setSecurity({ ...security, currentPassword: e.target.value })}
-                                            className="w-full pl-12 pr-5 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-brand-500/10 transition-all block"
+                                            className="w-full pl-12 pr-12 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-brand-500/10 transition-all block"
                                             required
                                         />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                                            className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-slate-600 transition-colors"
+                                        >
+                                            {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                        </button>
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -258,12 +276,19 @@ const AdminProfile = () => {
                                         <div className="relative group">
                                             <Lock className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-500" />
                                             <input
-                                                type="password"
+                                                type={showNewPassword ? "text" : "password"}
                                                 value={security.newPassword}
                                                 onChange={(e) => setSecurity({ ...security, newPassword: e.target.value })}
-                                                className="w-full pl-12 pr-5 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-brand-500/10 transition-all block"
+                                                className="w-full pl-12 pr-12 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-brand-500/10 transition-all block"
                                                 required
                                             />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowNewPassword(!showNewPassword)}
+                                                className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-slate-600 transition-colors"
+                                            >
+                                                {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                            </button>
                                         </div>
                                     </div>
                                     <div className="space-y-3">
@@ -271,12 +296,19 @@ const AdminProfile = () => {
                                         <div className="relative group">
                                             <Lock className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-500" />
                                             <input
-                                                type="password"
+                                                type={showConfirmPassword ? "text" : "password"}
                                                 value={security.confirmPassword}
                                                 onChange={(e) => setSecurity({ ...security, confirmPassword: e.target.value })}
-                                                className="w-full pl-12 pr-5 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-brand-500/10 transition-all block"
+                                                className="w-full pl-12 pr-12 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-brand-500/10 transition-all block"
                                                 required
                                             />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-slate-600 transition-colors"
+                                            >
+                                                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                            </button>
                                         </div>
                                     </div>
                                 </div>

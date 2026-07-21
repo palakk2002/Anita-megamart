@@ -148,9 +148,9 @@ const OrderHistory = () => {
   };
 
   return (
-    <div className="bg-gray-50/50 min-h-screen pb-24">
+    <div className="bg-gray-50/50 min-h-screen pb-24 pt-[180px]">
       {/* Header */}
-      <div className="bg-white shadow-sm p-4 sticky top-0 z-30 backdrop-blur-md bg-white/90">
+      <div className="bg-white shadow-sm p-4 fixed top-0 w-full max-w-md inset-x-0 mx-auto z-30 backdrop-blur-md bg-white/90">
         <h1 className="ds-h2 text-gray-900 mb-4">Order History</h1>
 
         {/* Search & Filter */}

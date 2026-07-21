@@ -30,8 +30,27 @@ const Topbar = ({ onMenuClick }) => {
     const [searchQuery, setSearchQuery] = React.useState('');
     const [notifications, setNotifications] = React.useState([]);
     const [unreadCount, setUnreadCount] = React.useState(0);
-    const [showNotifications, setShowNotifications] = React.useState(false);
+    const [showNotifications, setShowNotifications] = React.useState(() => {
+        return localStorage.getItem('isNotificationsOpen') === 'true';
+    });
     const notificationRef = React.useRef(null);
+
+    React.useEffect(() => {
+        localStorage.setItem('isNotificationsOpen', showNotifications);
+        const scrollContainer = document.getElementById('main-scroll-container');
+        
+        if (showNotifications) {
+            if (scrollContainer) scrollContainer.style.overflow = 'hidden';
+            document.body.style.overflow = 'hidden'; // fallback
+        } else {
+            if (scrollContainer) scrollContainer.style.overflow = '';
+            document.body.style.overflow = '';
+        }
+        return () => {
+            if (scrollContainer) scrollContainer.style.overflow = '';
+            document.body.style.overflow = '';
+        };
+    }, [showNotifications]);
 
     const isSeller = location.pathname.startsWith('/seller');
     const isAdmin = location.pathname.startsWith('/admin');
@@ -122,16 +141,24 @@ const Topbar = ({ onMenuClick }) => {
         };
     }, [isSeller, isAdmin, token, fetchNotifications]);
 
-    // Handle Click Outside
+    // Handle Click Outside (improved to prevent immediate close on open)
     React.useEffect(() => {
         const handleClickOutside = (event) => {
-            if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+            if (showNotifications && notificationRef.current && !notificationRef.current.contains(event.target)) {
                 setShowNotifications(false);
             }
         };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+        // Use a slight timeout before attaching to avoid catching the initial open click if events bubble
+        const timer = setTimeout(() => {
+            document.addEventListener('mousedown', handleClickOutside);
+            document.addEventListener('touchstart', handleClickOutside, { passive: true });
+        }, 100);
+        return () => {
+            clearTimeout(timer);
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('touchstart', handleClickOutside);
+        };
+    }, [showNotifications]);
 
     const handleMarkAsRead = async (id) => {
         try {
@@ -155,6 +182,30 @@ const Topbar = ({ onMenuClick }) => {
         }
     };
 
+    const handleDeleteNotification = async (id) => {
+        try {
+            if (!id) return;
+            if (isSeller) await sellerApi.deleteNotification(id);
+            if (isAdmin) await adminApi.deleteNotification(id);
+            fetchNotifications();
+            toast.success("Notification deleted");
+        } catch (error) {
+            toast.error("Failed to delete notification");
+        }
+    };
+
+    const handleClearAllNotifications = async () => {
+        try {
+            if (isSeller) await sellerApi.clearAllNotifications();
+            if (isAdmin) await adminApi.clearAllNotifications();
+            fetchNotifications();
+            toast.success("All notifications cleared");
+            setShowNotifications(false);
+        } catch (error) {
+            toast.error("Failed to clear notifications");
+        }
+    };
+
     const handleLogout = () => {
         logout();
     };
@@ -163,7 +214,7 @@ const Topbar = ({ onMenuClick }) => {
         <header className={cn(
             "bg-white/70 backdrop-blur-xl border-b border-gray-100/50 flex items-center justify-between shadow-[0_4px_30px_rgba(0,0,0,0.02)] transition-all duration-300",
             (role === 'admin' || role === 'seller')
-                ? "fixed top-0 left-0 right-0 z-[200] h-14 px-4 md:sticky md:top-0 md:h-16 md:px-6"
+                ? "fixed top-0 left-0 right-0 z-[200] h-14 px-4 md:left-72 md:h-16 md:px-6"
                 : "fixed top-0 left-72 right-0 h-16 px-6 z-40"
         )}>
             <div className="flex items-center flex-1 mr-4 overflow-hidden">
@@ -221,6 +272,8 @@ const Topbar = ({ onMenuClick }) => {
                                 notifications={notifications}
                                 onMarkAsRead={handleMarkAsRead}
                                 onMarkAllAsRead={handleMarkAllAsRead}
+                                onDelete={handleDeleteNotification}
+                                onClearAll={handleClearAllNotifications}
                                 onClose={() => setShowNotifications(false)}
                             />
                         )}

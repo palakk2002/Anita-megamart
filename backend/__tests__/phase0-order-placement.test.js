@@ -53,11 +53,19 @@ const OrderMock = jest.fn().mockImplementation((doc) => {
 OrderMock.find = mockOrderFind;
 OrderMock.findOne = mockOrderFindOne;
 
-jest.unstable_mockModule("mongoose", () => ({
-  default: {
-    startSession: mockStartSession,
-  },
-}));
+jest.unstable_mockModule("mongoose", () => {
+  const Schema = function () {};
+  Schema.prototype.index = jest.fn();
+  Schema.prototype.pre = jest.fn();
+  Schema.Types = { ObjectId: "ObjectId" };
+  return {
+    default: {
+      startSession: mockStartSession,
+      Schema,
+      model: jest.fn(),
+    },
+  };
+});
 
 jest.unstable_mockModule("../app/models/customer.js", () => ({
   default: {

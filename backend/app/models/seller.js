@@ -40,6 +40,11 @@ const sellerSchema = new mongoose.Schema(
       trim: true,
     },
 
+    profileImage: {
+      type: String,
+      trim: true,
+    },
+
     description: {
       type: String,
       trim: true,

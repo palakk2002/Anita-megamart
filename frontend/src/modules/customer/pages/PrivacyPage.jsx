@@ -1,10 +1,12 @@
 import React from 'react';
 import { ChevronLeft, Shield } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSettings } from '@core/context/SettingsContext';
 
 const PrivacyPage = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const fromDelivery = searchParams.get('from') === 'delivery';
     const { settings } = useSettings();
     const appName = settings?.appName || 'App';
     return (
@@ -12,7 +14,21 @@ const PrivacyPage = () => {
             {/* Header */}
             <div className="bg-white sticky top-0 z-30 px-4 py-3 flex items-center gap-1 shadow-sm">
                 <button
-                    onClick={() => navigate(-1)}
+                    onClick={() => {
+                        if (window.history.length > 1) {
+                            navigate(-1);
+                        } else if (window.opener) {
+                            window.close();
+                        }
+                        
+                        setTimeout(() => {
+                            if (fromDelivery) {
+                                navigate('/delivery/auth');
+                            } else {
+                                navigate('/');
+                            }
+                        }, 100);
+                    }}
                     className="p-2 -ml-2 rounded-full hover:bg-slate-100 transition-colors"
                 >
                     <ChevronLeft size={24} className="text-slate-600" />
