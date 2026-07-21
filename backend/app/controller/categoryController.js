@@ -6,6 +6,7 @@ import { uploadToCloudinary } from "../services/mediaService.js";
 import mongoose from "mongoose";
 import { invalidateCategoryName } from "../services/entityNameCache.js";
 import { buildSearchRegex } from "../utils/regex.js";
+import { slugify } from "../utils/slugify.js";
 
 function normalizeUrl(value) {
   if (!value || typeof value !== "string") return "";
@@ -46,6 +47,26 @@ async function validateParentForType(type, parentId) {
     return false;
   }
 }
+
+async function generateUniqueCategorySlug(text, excludeCategoryId = null) {
+  const baseSlug = slugify(text || "category");
+  let slug = baseSlug;
+  let count = 0;
+  while (true) {
+    const query = { slug };
+    if (excludeCategoryId) {
+      query._id = { $ne: excludeCategoryId };
+    }
+    const exists = await Category.findOne(query).lean();
+    if (!exists) {
+      break;
+    }
+    count++;
+    slug = `${baseSlug}-${count}`;
+  }
+  return slug;
+}
+
 
 /* ===============================
    GET ALL CATEGORIES (Hierarchy)
@@ -196,11 +217,13 @@ export const createCategory = async (req, res) => {
       if (type === "subcategory") return handleResponse(res, 400, "Level 3 Subcategory must be linked to a Level 2 Category");
     }
 
-    // Final sanity check for unique slug to prevent catch block late failure
-    const existing = await Category.findOne({ slug: categoryData.slug }).lean();
-    if (existing) {
-        return handleResponse(res, 400, "The URL Slug already exists; please use a unique name");
+    // Auto-generate or make unique slug
+    if (!categoryData.slug || String(categoryData.slug).trim() === "") {
+      categoryData.slug = await generateUniqueCategorySlug(categoryData.name);
+    } else {
+      categoryData.slug = await generateUniqueCategorySlug(categoryData.slug);
     }
+
 
     const category = await Category.create(categoryData);
     
@@ -258,7 +281,7 @@ export const updateCategory = async (req, res) => {
         if (req.body.image && typeof req.body.image === 'object') delete categoryData.image;
     }
 
-    const existing = await Category.findById(id).select("type parentId").lean();
+    const existing = await Category.findById(id).select("type parentId name slug").lean();
     if (!existing) return handleResponse(res, 404, "Category not found");
 
     const hasParentId = Object.prototype.hasOwnProperty.call(categoryData, "parentId");
@@ -276,6 +299,12 @@ export const updateCategory = async (req, res) => {
       if (type === "category") return handleResponse(res, 400, "Level 2 Category must be linked to a Level 1 Header category");
       if (type === "subcategory") return handleResponse(res, 400, "Level 3 Subcategory must be linked to a Level 2 Category");
     }
+
+    if (categoryData.slug !== undefined || categoryData.name) {
+      const slugInput = categoryData.slug || categoryData.name || existing.slug || existing.name;
+      categoryData.slug = await generateUniqueCategorySlug(slugInput, id);
+    }
+
 
     const updatedCategory = await Category.findByIdAndUpdate(
       id,

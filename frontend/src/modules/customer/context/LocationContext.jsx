@@ -313,6 +313,8 @@ export const LocationProvider = ({ children }) => {
         persist: true,
         updateSavedHome: false,
       });
+      // Fetch current live location automatically when the user opens the app for the first time
+      fetchAndCacheLocation();
     }
     // Live fetch happens only when user taps location pill or "Use current location"
     // eslint-disable-next-line react-hooks/exhaustive-deps
