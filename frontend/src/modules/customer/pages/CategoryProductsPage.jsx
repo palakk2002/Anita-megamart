@@ -33,6 +33,7 @@ const CategoryProductsPage = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [noServiceData, setNoServiceData] = useState(null);
     const [isOutOfService, setIsOutOfService] = useState(false);
+    const [isHeaderCategory, setIsHeaderCategory] = useState(false);
 
     // Dynamically load no-service Lottie on mount
     useEffect(() => {
@@ -48,17 +49,42 @@ const CategoryProductsPage = () => {
                 Number.isFinite(currentLocation?.latitude) &&
                 Number.isFinite(currentLocation?.longitude);
 
-            // Fetch products and categories in parallel instead of sequentially
-            const [prodRes, catRes] = await Promise.all([
-                hasValidLocation
-                    ? customerApi.getProducts({
-                        categoryId: catId,
-                        lat: currentLocation.latitude,
-                        lng: currentLocation.longitude,
-                    })
-                    : Promise.resolve({ data: { success: true, result: { items: [] } } }),
-                customerApi.getCategories({ tree: true }),
-            ]);
+            const catRes = await customerApi.getCategories({ tree: true });
+            let isHeader = false;
+            let currentCat = null;
+
+            if (catRes.data.success) {
+                const tree = catRes.data.results || catRes.data.result || [];
+                const headerMatch = tree.find(h => h._id === catId);
+                if (headerMatch) {
+                    isHeader = true;
+                    currentCat = headerMatch;
+                } else {
+                    for (const header of tree) {
+                        const found = (header.children || []).find(c => c._id === catId);
+                        if (found) {
+                            currentCat = found;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            setIsHeaderCategory(isHeader);
+
+            const productParams = {
+                lat: currentLocation?.latitude,
+                lng: currentLocation?.longitude,
+            };
+            if (isHeader) {
+                productParams.headerId = catId;
+            } else {
+                productParams.categoryId = catId;
+            }
+
+            const prodRes = hasValidLocation
+                ? await customerApi.getProducts(productParams)
+                : { data: { success: true, result: { items: [] } } };
 
             if (prodRes.data.success) {
                 const rawResult = prodRes.data.result;
@@ -92,26 +118,14 @@ const CategoryProductsPage = () => {
                 setProducts([]);
             }
 
-            if (catRes.data.success) {
-                const tree = catRes.data.results || catRes.data.result || [];
-                let currentCat = null;
-                for (const header of tree) {
-                    const found = (header.children || []).find(c => c._id === catId);
-                    if (found) {
-                        currentCat = found;
-                        break;
-                    }
-                }
-
-                if (currentCat) {
-                    setCategory(currentCat);
-                    const subs = (currentCat.children || []).map(s => ({
-                        id: s._id,
-                        name: s.name,
-                        icon: s.image || 'https://cdn-icons-png.flaticon.com/128/2321/2321801.png'
-                    }));
-                    setSubCategories([{ id: 'all', name: 'All', icon: 'https://cdn-icons-png.flaticon.com/128/2321/2321831.png' }, ...subs]);
-                }
+            if (currentCat) {
+                setCategory(currentCat);
+                const subs = (currentCat.children || []).map(s => ({
+                    id: s._id,
+                    name: s.name,
+                    icon: s.image || 'https://cdn-icons-png.flaticon.com/128/2321/2321801.png'
+                }));
+                setSubCategories([{ id: 'all', name: 'All', icon: 'https://cdn-icons-png.flaticon.com/128/2321/2321831.png' }, ...subs]);
             }
         } catch (error) {
             console.error("Error fetching category data:", error);
@@ -127,9 +141,14 @@ const CategoryProductsPage = () => {
 
     const safeProducts = Array.isArray(products) ? products : [];
 
-    const filteredProducts = safeProducts.filter(p =>
-        selectedSubCategory === 'all' || p.subcategoryId?._id === selectedSubCategory || p.subcategoryId === selectedSubCategory
-    );
+    const filteredProducts = safeProducts.filter(p => {
+        if (selectedSubCategory === 'all') return true;
+        if (isHeaderCategory) {
+            return p.categoryId?._id === selectedSubCategory || p.categoryId === selectedSubCategory;
+        } else {
+            return p.subcategoryId?._id === selectedSubCategory || p.subcategoryId === selectedSubCategory;
+        }
+    });
 
     const productsById = React.useMemo(() => {
         const map = {};

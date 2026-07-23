@@ -410,27 +410,14 @@ const Home = () => {
 
   const productsById = useMemo(() => { const map = {}; products.forEach((p) => { map[p._id || p.id] = p; }); return map; }, [products]);
   const effectiveQuickCategories = useMemo(() => {
-    const isHeader = activeCategory && activeCategory._id !== "all";
-    const isCorrectConfig = isHeader
-      ? (heroConfig && String(heroConfig.headerId || '') === String(activeCategory?._id || ''))
-      : true;
-
-    const ids = isCorrectConfig ? (heroConfig.categoryIds || []) : [];
-    let resolved = [];
-    if (ids.length > 0) {
-      resolved = ids.map((id) => categoryMap[id]).filter(Boolean).map((c) => ({ id: c._id || c.id, name: c.name, parentId: c.parentId?._id || c.parentId, image: c.image || "https://cdn-icons-png.flaticon.com/128/2321/2321831.png" }));
-    } else {
-      resolved = quickCategories;
-    }
-    if (isHeader) {
-      return resolved.filter((c) => {
-        const pId = c.parentId;
-        const parentIdStr = typeof pId === 'object' ? pId?._id : pId;
-        return String(parentIdStr) === String(activeCategory._id);
-      });
-    }
-    return resolved;
-  }, [heroConfig, categoryMap, quickCategories, activeCategory]);
+    return categories
+      .filter((cat) => cat.id !== "all")
+      .map((cat) => ({
+        id: cat.id || cat._id,
+        name: cat.name,
+        image: cat.image || "https://cdn-icons-png.flaticon.com/128/2321/2321831.png",
+      }));
+  }, [categories]);
 
   const effectiveLowestPriceProducts = useMemo(() => {
     if (!activeCategory || activeCategory._id === "all") {
@@ -499,7 +486,10 @@ const Home = () => {
           </motion.div>
 
           <PromoMarquee />
-          <QuickCategorySlider categories={effectiveQuickCategories} onCategoryClick={(id) => navigate(`/category/${id}`)} />
+          <QuickCategorySlider
+            categories={effectiveQuickCategories}
+            onCategoryClick={(id) => navigate(`/category/${id}`)}
+          />
           <LowestPriceSection products={effectiveLowestPriceProducts} onSeeAll={() => navigate("/category/all")} />
           <OfferSections sections={offerSections} noServiceData={noServiceData} />
 
