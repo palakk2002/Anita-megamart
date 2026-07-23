@@ -1293,3 +1293,181 @@ export const rejectProduct = async (req, res) => {
     return handleResponse(res, 500, error.message);
   }
 };
+
+/* ===============================
+   BULK CREATE PRODUCTS
+================================ */
+export const bulkCreateProducts = async (req, res) => {
+  try {
+    const role = String(req.user?.role || "").toLowerCase();
+    const { products } = req.body;
+
+    if (!Array.isArray(products) || products.length === 0) {
+      return handleResponse(res, 400, "Please provide an array of products");
+    }
+
+    const createdProducts = [];
+    const errors = [];
+
+    const approvalConfig = await getProductApprovalConfig();
+
+    for (let index = 0; index < products.length; index++) {
+      const rawProduct = products[index];
+      try {
+        const productData = { ...rawProduct };
+        stripRestrictedModerationFields(productData);
+
+        if (role === "admin") {
+          if (!productData.sellerId) {
+            errors.push({ index, error: "sellerId is required for admin-created products" });
+            continue;
+          }
+        } else {
+          productData.sellerId = req.user.id;
+        }
+
+        if (!productData.name) {
+          errors.push({ index, error: "Product name is required" });
+          continue;
+        }
+
+        if (!productData.headerId) {
+          errors.push({ index, error: "Main Group (headerId) is required" });
+          continue;
+        }
+        if (!productData.categoryId) {
+          errors.push({ index, error: "Specific Category (categoryId) is required" });
+          continue;
+        }
+        if (!productData.subcategoryId) {
+          errors.push({ index, error: "Sub-Category (subcategoryId) is required" });
+          continue;
+        }
+
+        const basePrice = Number(productData.price);
+        const baseStock = Number(productData.stock);
+
+        if (isNaN(basePrice) || basePrice < 0) {
+          errors.push({ index, error: "Valid price is required" });
+          continue;
+        }
+        if (isNaN(baseStock) || baseStock < 0) {
+          errors.push({ index, error: "Valid stock is required" });
+          continue;
+        }
+
+        // Auto-generate slug
+        if (!productData.slug || productData.slug.trim() === "") {
+          productData.slug = await generateUniqueSlug(productData.name);
+        } else {
+          productData.slug = await generateUniqueSlug(productData.slug);
+        }
+
+        productData.description = typeof productData.description === "string"
+          ? productData.description.trim()
+          : productData.description || "";
+
+        // Auto-generate SKU
+        if (!productData.sku || String(productData.sku).trim() === "") {
+          productData.sku = await generateUniqueSku(productData.name, 1);
+        } else {
+          productData.sku = await generateUniqueSku(productData.sku, 1);
+        }
+
+        // Handle base64 mainImage upload to Cloudinary
+        if (productData.mainImage && String(productData.mainImage).startsWith("data:image/")) {
+          try {
+            const base64Data = productData.mainImage.split(",")[1];
+            const mimeType = productData.mainImage.split(";")[0].split(":")[1];
+            const buffer = Buffer.from(base64Data, "base64");
+
+            const uploadedUrl = await uploadToCloudinary(buffer, "products", {
+              mimeType,
+              resourceType: "image",
+            });
+            productData.mainImage = uploadedUrl;
+          } catch (uploadErr) {
+            // fail-soft
+          }
+        }
+
+        applyMediaFields(productData);
+
+        if (typeof productData.tags === "string") {
+          productData.tags = productData.tags.split(",").map((t) => t.trim()).filter(Boolean);
+        }
+
+        if (typeof productData.variants === "string") {
+          try {
+            productData.variants = JSON.parse(productData.variants);
+          } catch {
+            productData.variants = [];
+          }
+        }
+
+        if (!Array.isArray(productData.variants) || productData.variants.length === 0) {
+          productData.variants = [{
+            name: "Default",
+            price: basePrice,
+            salePrice: Number(productData.salePrice) || 0,
+            stock: baseStock,
+            sku: productData.sku
+          }];
+        } else {
+          productData.variants = await Promise.all(
+            productData.variants.map(async (variant, idx) => {
+              const variantSku = variant?.sku && String(variant.sku).trim()
+                ? variant.sku
+                : makeProductSku(productData.name, idx + 1);
+              return {
+                ...variant,
+                price: Number(variant.price) || basePrice,
+                salePrice: Number(variant.salePrice) || 0,
+                stock: Number(variant.stock) || 0,
+                sku: await generateUniqueSku(variantSku, 1),
+              };
+            })
+          );
+        }
+
+        let moderationUpdate = {};
+        if (role === "admin") {
+          moderationUpdate = buildAdminApprovedModerationUpdate(req.user?.id || null);
+        } else {
+          if (approvalConfig.sellerCreateRequiresApproval) {
+            moderationUpdate = buildSellerPendingModerationUpdate();
+          } else {
+            moderationUpdate = buildSellerApprovedModerationUpdate();
+          }
+        }
+        Object.assign(productData, moderationUpdate);
+
+        const product = await Product.create(productData);
+        if (product && product._id) {
+          await enqueueProductIndex(product._id.toString());
+          await invalidate(`cache:catalog:product:${product._id.toString()}`);
+          createdProducts.push(product);
+        }
+      } catch (err) {
+        errors.push({ index, error: err.message });
+      }
+    }
+
+    try {
+      await invalidate(buildKey("catalog", "productList", "*"));
+      await invalidate("cache:offersections:public:*");
+    } catch (cacheErr) {
+      logger.error("Bulk upload cache invalidation error", { error: cacheErr });
+    }
+
+    return res.status(createdProducts.length > 0 ? 201 : 400).json({
+      success: createdProducts.length > 0,
+      message: `Successfully created ${createdProducts.length} out of ${products.length} products.`,
+      results: createdProducts,
+      errors
+    });
+  } catch (error) {
+    return handleResponse(res, 500, error.message);
+  }
+};
+

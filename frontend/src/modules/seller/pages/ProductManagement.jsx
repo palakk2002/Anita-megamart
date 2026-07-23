@@ -21,6 +21,7 @@ import {
   HiOutlineFolderOpen,
   HiOutlineSwatch,
   HiOutlineSquaresPlus,
+  HiOutlineTableCells,
 } from "react-icons/hi2";
 import Modal from "@shared/components/ui/Modal";
 import { cn } from "@/lib/utils";
@@ -505,12 +506,22 @@ const ProductManagement = () => {
             Track your items, prices, and how many are left in stock.
           </p>
         </div>
-        <button
-          onClick={() => navigate("/seller/products/add")}
-          className="flex items-center gap-2 bg-black  text-primary-foreground px-4 py-2 rounded-lg hover:bg-brand-700 transition-colors">
-          <HiOutlinePlus className="h-5 w-5" />
-          Add New Product
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => navigate("/seller/products/bulk")}
+            className="flex items-center gap-2 bg-white ring-1 ring-slate-200 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-50 transition-colors font-bold text-xs"
+          >
+            <HiOutlineTableCells className="h-5 w-5 text-slate-500" />
+            Bulk Upload
+          </button>
+          <button
+            onClick={() => navigate("/seller/products/add")}
+            className="flex items-center gap-2 bg-black  text-primary-foreground px-4 py-2 rounded-lg hover:bg-brand-700 transition-colors"
+          >
+            <HiOutlinePlus className="h-5 w-5" />
+            Add New Product
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
