@@ -1,17 +1,20 @@
-import fs from 'fs';
-import path from 'path';
+import fs from "fs";
 
-try {
-  const filePath = path.resolve('out.txt');
-  if (fs.existsSync(filePath)) {
-    const content = fs.readFileSync(filePath, 'utf16le');
-    const lines = content.split('\n');
-    console.log(`Total lines: ${lines.length}`);
-    console.log("Last 100 lines:");
-    console.log(lines.slice(-100).join('\n'));
-  } else {
-    console.log("out.txt does not exist in current directory.");
+function readOutFile() {
+  try {
+    const data = fs.readFileSync("c:\\Users\\HP\\Desktop\\Anita-megamart\\backend\\out.txt", "utf16le");
+    const lines = data.split("\n");
+    console.log("Total lines in out.txt:", lines.length);
+    
+    // Print lines containing MongoDB or connected
+    lines.forEach((line, index) => {
+      if (line.toLowerCase().includes("mongo") || line.toLowerCase().includes("connect")) {
+        console.log(`Line ${index + 1}: ${line.trim()}`);
+      }
+    });
+  } catch (error) {
+    console.error("Error reading file:", error.message);
   }
-} catch (error) {
-  console.error("Error reading file:", error);
 }
+
+readOutFile();

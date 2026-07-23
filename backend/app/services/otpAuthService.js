@@ -117,27 +117,16 @@ export async function issueCustomerOtp({
     "+otpHash +otpExpiresAt +otpFailedAttempts +otpLockedUntil +otpLastSentAt +otpSessionVersion +otp +otpExpiry",
   );
 
-  if (flow === "login" && (!customer || !customer.isVerified)) {
-    if (useRealSMS()) {
-      otpAuditLog("customer_otp_login_generic_response", {
-        phone: maskPhone(phone),
-        ipAddress,
-        accountExists: !!customer,
-      });
-      return { sent: true, phone };
-    }
+  if (flow === "login" && !customer) {
+    const err = new Error("Customer account not found. Please sign up.");
+    err.statusCode = 404;
+    throw err;
+  }
 
-    // In mock/dev mode, allow login OTP issuance so local testing works end-to-end.
-    if (!customer) {
-      customer = await Customer.create({
-        name: name || "Customer",
-        phone,
-        isVerified: false,
-      });
-      customer = await Customer.findById(customer._id).select(
-        "+otpHash +otpExpiresAt +otpFailedAttempts +otpLockedUntil +otpLastSentAt +otpSessionVersion +otp +otpExpiry",
-      );
-    }
+  if (flow === "signup" && customer && customer.isVerified) {
+    const err = new Error("Customer account already exists. Please log in.");
+    err.statusCode = 409;
+    throw err;
   }
 
   if (!customer) {
@@ -197,10 +186,15 @@ export async function issueCustomerOtp({
       flow,
       ipAddress,
       mode: "mock",
+      otp,
     });
   }
 
-  return { sent: true, phone };
+  const response = { sent: true, phone };
+  if (!useRealSMS()) {
+    response.mockOtp = otp;
+  }
+  return response;
 }
 
 export async function verifyCustomerOtpCode({

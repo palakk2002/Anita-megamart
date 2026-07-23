@@ -145,6 +145,9 @@ const DeliveryAuth = () => {
         }
         const res = await deliveryApi.sendLoginOtp({ phone: loginPhone });
         toast.success(res.data?.message || "OTP sent!");
+        if (res.data?.result?.mockOtp) {
+          toast.info(`Mock OTP: ${res.data.result.mockOtp}`, { duration: 10000 });
+        }
       } else {
         if (!signupName.trim()) { toast.error("Please enter your name"); return; }
         if (!signupPhone || signupPhone.length < 10) { toast.error("Please enter a valid 10-digit phone number"); return; }
@@ -169,6 +172,9 @@ const DeliveryAuth = () => {
 
         const res = await deliveryApi.sendSignupOtp(formData);
         toast.success(res.data?.message || "OTP sent!");
+        if (res.data?.result?.mockOtp) {
+          toast.info(`Mock OTP: ${res.data.result.mockOtp}`, { duration: 10000 });
+        }
       }
       setOtp(["", "", "", ""]);
       setTimer(30);

@@ -120,16 +120,21 @@ const CustomerAuth = () => {
         }
         setIsLoading(true);
         try {
+            let res;
             if (isLogin) {
-                await customerApi.sendLoginOtp({ phone: formData.phone });
+                res = await customerApi.sendLoginOtp({ phone: formData.phone });
             } else {
-                await customerApi.sendSignupOtp({ name: formData.name, phone: formData.phone });
+                res = await customerApi.sendSignupOtp({ name: formData.name, phone: formData.phone });
             }
             setShowOtp(true);
             setTimer(30);
             toast.success('OTP sent!');
+            if (res?.data?.result?.mockOtp) {
+                toast.info(`Mock OTP: ${res.data.result.mockOtp}`, { duration: 10000 });
+            }
         } catch (error) {
-            toast.error('Failed to send OTP');
+            const apiMessage = error?.response?.data?.message;
+            toast.error(apiMessage || 'Failed to send OTP');
         } finally {
             setIsLoading(false);
         }
