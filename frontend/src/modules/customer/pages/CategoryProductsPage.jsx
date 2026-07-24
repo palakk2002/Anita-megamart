@@ -250,6 +250,7 @@ const CategoryProductsPage = () => {
                             ref={sidebarRef}
                             style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}
                             className="w-[70px] border-r border-gray-50 flex flex-col bg-white overflow-y-auto hide-scrollbar sticky top-[60px] h-[calc(100vh-60px)] flex-shrink-0 touch-pan-y"
+                            data-lenis-prevent
                         >
                             <div className="flex flex-col w-full pb-12">
                                 {subCategories.map((cat) => (
