@@ -34,6 +34,25 @@ const CategoryProductsPage = () => {
     const [noServiceData, setNoServiceData] = useState(null);
     const [isOutOfService, setIsOutOfService] = useState(false);
     const [isHeaderCategory, setIsHeaderCategory] = useState(false);
+    const sidebarRef = React.useRef(null);
+
+    // Lock scrolling strictly to sidebar when wheel scrolling over it
+    useEffect(() => {
+        const el = sidebarRef.current;
+        if (!el) return;
+
+        const handleWheel = (e) => {
+            const { scrollTop, scrollHeight, clientHeight } = el;
+            const delta = e.deltaY;
+
+            if ((delta < 0 && scrollTop <= 0) || (delta > 0 && scrollTop + clientHeight >= scrollHeight - 1)) {
+                e.preventDefault();
+            }
+        };
+
+        el.addEventListener('wheel', handleWheel, { passive: false });
+        return () => el.removeEventListener('wheel', handleWheel);
+    }, [subCategories]);
 
     // Dynamically load no-service Lottie on mount
     useEffect(() => {
@@ -199,8 +218,6 @@ const CategoryProductsPage = () => {
                                 </p>
                                 <button 
                                     onClick={() => {
-                                        // Trigger location selector drawer in header by dispatching custom event or using a global callback, 
-                                        // or simply instruct the user to tap the Location Pill at the top of the Home page.
                                         navigate('/');
                                         toast.info("Please tap on the Location selector at the top of the page to choose a serviceable area.");
                                     }}
@@ -229,36 +246,44 @@ const CategoryProductsPage = () => {
                 ) : (
                     <>
                         {/* Sidebar */}
-                        <aside className="w-[70px] border-r border-gray-50 flex flex-col bg-white overflow-y-auto hide-scrollbar sticky top-[60px] h-[calc(100vh-60px)] pb-32 flex-shrink-0">
-                            {subCategories.map((cat) => (
-                                <button
-                                    key={cat.id}
-                                    onClick={() => setSelectedSubCategory(cat.id)}
-                                    className={cn(
-                                        "flex flex-col items-center py-4 px-1 gap-2 transition-all relative border-l-4",
-                                        selectedSubCategory === cat.id
-                                            ? "bg-[#F7FCF5] border-primary"
-                                            : "border-transparent hover:bg-gray-50"
-                                    )}
-                                >
-                                    <div className={cn(
-                                        "w-14 h-14 rounded-2xl flex items-center justify-center p-1.5 transition-all duration-300",
-                                        selectedSubCategory === cat.id ? "scale-110" : "opacity-100"
-                                    )}>
-                                        <img src={applyCloudinaryTransform(cat.icon)} alt={cat.name} loading="lazy" className="w-full h-full object-contain" />
-                                    </div>
-                                    <span className={cn(
-                                        "text-[10px] text-center font-bold font-sans leading-tight px-1",
-                                        selectedSubCategory === cat.id ? "text-primary" : "text-gray-600"
-                                    )}>
-                                        {cat.name}
-                                    </span>
-                                </button>
-                            ))}
+                        <aside 
+                            ref={sidebarRef}
+                            style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}
+                            className="w-[70px] border-r border-gray-50 flex flex-col bg-white overflow-y-auto hide-scrollbar sticky top-[60px] h-[calc(100vh-60px)] flex-shrink-0 touch-pan-y"
+                        >
+                            <div className="flex flex-col w-full pb-12">
+                                {subCategories.map((cat) => (
+                                    <button
+                                        key={cat.id}
+                                        onClick={() => setSelectedSubCategory(cat.id)}
+                                        className={cn(
+                                            "flex flex-col items-center py-4 px-1 gap-2 transition-all relative border-l-4",
+                                            selectedSubCategory === cat.id
+                                                ? "bg-[#F7FCF5] border-primary"
+                                                : "border-transparent hover:bg-gray-50"
+                                        )}
+                                    >
+                                        <div className={cn(
+                                            "w-14 h-14 rounded-2xl flex items-center justify-center p-1.5 transition-all duration-300",
+                                            selectedSubCategory === cat.id ? "scale-110" : "opacity-100"
+                                        )}>
+                                            <img src={applyCloudinaryTransform(cat.icon)} alt={cat.name} loading="lazy" className="w-full h-full object-contain" />
+                                        </div>
+                                        <span className={cn(
+                                            "text-[10px] text-center font-bold font-sans leading-tight px-1",
+                                            selectedSubCategory === cat.id ? "text-primary" : "text-gray-600"
+                                        )}>
+                                            {cat.name}
+                                        </span>
+                                    </button>
+                                ))}
+                                {/* Dedicated spacer to guarantee smooth full scrolling to bottom on mobile and desktop */}
+                                <div className="h-36 w-full flex-shrink-0" aria-hidden="true" />
+                            </div>
                         </aside>
 
                         {/* Content */}
-                        <main className="flex-1 p-2 pb-24 bg-white space-y-4 overflow-x-hidden">
+                        <main className="flex-1 p-2 pb-28 bg-white space-y-4 overflow-x-hidden min-h-[calc(100vh-60px)]">
                             <div className="grid grid-cols-2 gap-x-2 gap-y-3">
                                 {filteredProducts.map((product) => (
                                     <ProductCard key={product.id} product={product} compact={true} />
