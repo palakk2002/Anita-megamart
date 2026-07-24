@@ -17,6 +17,7 @@ import { useNavigate } from "react-router-dom";
 import { sellerApi } from "../services/sellerApi";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
+import Modal from "@shared/components/ui/Modal";
 
 const BulkUploadProducts = () => {
   const navigate = useNavigate();
@@ -24,6 +25,7 @@ const BulkUploadProducts = () => {
   const [dbCategories, setDbCategories] = useState([]);
   const [isLoadingCats, setIsLoadingCats] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   // States for Excel/CSV tab
   const [csvFile, setCsvFile] = useState(null);
@@ -279,6 +281,38 @@ const BulkUploadProducts = () => {
     reader.readAsArrayBuffer(file);
   };
 
+  // Delete / Reset All Items
+  const handleConfirmDeleteAll = () => {
+    if (activeTab === "csv") {
+      setCsvFile(null);
+      setParsedProducts([]);
+      setParsingErrors([]);
+      toast.success("All parsed Excel products cleared!");
+    } else {
+      setGridRows([
+        {
+          id: Date.now(),
+          name: "",
+          description: "",
+          brand: "",
+          sku: "",
+          weight: "",
+          price: "",
+          salePrice: "",
+          stock: "",
+          tags: "",
+          headerId: "",
+          categoryId: "",
+          subcategoryId: "",
+          mainImage: "",
+          galleryImages: "",
+        },
+      ]);
+      toast.success("Grid items reset successfully!");
+    }
+    setIsDeleteModalOpen(false);
+  };
+
   // Submit Parsed CSV Products
   const handlePublishCsv = async () => {
     if (parsedProducts.length === 0) {
@@ -288,12 +322,19 @@ const BulkUploadProducts = () => {
     setIsSaving(true);
     try {
       const response = await sellerApi.bulkCreateProducts({ products: parsedProducts });
-      if (response.data.success) {
-        toast.success(response.data.message || "Bulk products published successfully!");
+      const data = response.data;
+      if (data?.success) {
+        toast.success(data.message || "Bulk products published successfully!");
+        if (data.errors && data.errors.length > 0) {
+          toast.warning(`Note: ${data.errors.length} item(s) had issues.`);
+        }
         navigate("/seller/products");
+      } else {
+        toast.error(data?.message || "Failed to publish products");
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to publish products");
+      const msg = error.response?.data?.message || error.message || "Failed to publish products";
+      toast.error(msg);
     } finally {
       setIsSaving(false);
     }
@@ -387,12 +428,19 @@ const BulkUploadProducts = () => {
     setIsSaving(true);
     try {
       const response = await sellerApi.bulkCreateProducts({ products: formattedProducts });
-      if (response.data.success) {
-        toast.success(response.data.message || "Bulk products published successfully!");
+      const data = response.data;
+      if (data?.success) {
+        toast.success(data.message || "Bulk products published successfully!");
+        if (data.errors && data.errors.length > 0) {
+          toast.warning(`Note: ${data.errors.length} item(s) had issues.`);
+        }
         navigate("/seller/products");
+      } else {
+        toast.error(data?.message || "Failed to publish products");
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to publish products");
+      const msg = error.response?.data?.message || error.message || "Failed to publish products";
+      toast.error(msg);
     } finally {
       setIsSaving(false);
     }
@@ -419,30 +467,44 @@ const BulkUploadProducts = () => {
           </p>
         </div>
 
-        {/* Tab Controls */}
-        <div className="flex bg-slate-100 p-1 rounded-xl">
-          <button
-            onClick={() => setActiveTab("csv")}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-              activeTab === "csv"
-                ? "bg-white text-slate-800 shadow-sm"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            <HiOutlineDocumentArrowUp className="h-4 w-4" />
-            <span>Excel / CSV File</span>
-          </button>
-          <button
-            onClick={() => setActiveTab("grid")}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-              activeTab === "grid"
-                ? "bg-white text-slate-800 shadow-sm"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            <HiOutlineTableCells className="h-4 w-4" />
-            <span>Grid Row Entry</span>
-          </button>
+        {/* Tab Controls & Actions */}
+        <div className="flex items-center gap-3">
+          {(csvFile || parsedProducts.length > 0 || parsingErrors.length > 0 || (activeTab === "grid" && gridRows.length > 0)) && (
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteModalOpen(true)}
+              disabled={isSaving}
+              className="font-bold border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700 shadow-sm"
+            >
+              <HiOutlineTrash className="h-4 w-4 mr-2" />
+              Delete All
+            </Button>
+          )}
+
+          <div className="flex bg-slate-100 p-1 rounded-xl">
+            <button
+              onClick={() => setActiveTab("csv")}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                activeTab === "csv"
+                  ? "bg-white text-slate-800 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <HiOutlineDocumentArrowUp className="h-4 w-4" />
+              <span>Excel / CSV File</span>
+            </button>
+            <button
+              onClick={() => setActiveTab("grid")}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                activeTab === "grid"
+                  ? "bg-white text-slate-800 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <HiOutlineTableCells className="h-4 w-4" />
+              <span>Grid Row Entry</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -489,11 +551,24 @@ const BulkUploadProducts = () => {
                   <HiOutlineCloudArrowUp className="h-7 w-7" />
                 </div>
                 <h4 className="text-sm font-bold text-slate-800 mt-4">
-                  {csvFile ? csvFile.name : "Choose CSV file to upload"}
+                  {csvFile ? csvFile.name : "Choose CSV / Excel file to upload"}
                 </h4>
                 <p className="text-xs text-slate-500 font-semibold mt-1">
                   Drag and drop your file here, or click to browse
                 </p>
+                {csvFile && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsDeleteModalOpen(true);
+                    }}
+                    className="z-20 mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 transition-colors"
+                  >
+                    <HiOutlineTrash className="h-4 w-4" />
+                    <span>Delete All / Clear File</span>
+                  </button>
+                )}
               </div>
 
               {/* Validation Errors Panel */}
@@ -521,20 +596,31 @@ const BulkUploadProducts = () => {
                         {parsedProducts.length} Ready
                       </Badge>
                     </h3>
-                    <Button
-                      onClick={handlePublishCsv}
-                      disabled={isSaving || parsingErrors.length > 0}
-                      className="min-w-[150px] font-bold bg-black text-white hover:bg-slate-800"
-                    >
-                      {isSaving ? (
-                        <>
-                          <HiOutlineArrowPath className="mr-2 h-4 w-4 animate-spin" />
-                          Publishing...
-                        </>
-                      ) : (
-                        "Publish All Products"
-                      )}
-                    </Button>
+                    <div className="flex items-center gap-3">
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsDeleteModalOpen(true)}
+                        disabled={isSaving}
+                        className="font-bold border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                      >
+                        <HiOutlineTrash className="h-4 w-4 mr-2" />
+                        Delete All
+                      </Button>
+                      <Button
+                        onClick={handlePublishCsv}
+                        disabled={isSaving || parsingErrors.length > 0}
+                        className="min-w-[150px] font-bold bg-black text-white hover:bg-slate-800"
+                      >
+                        {isSaving ? (
+                          <>
+                            <HiOutlineArrowPath className="mr-2 h-4 w-4 animate-spin" />
+                            Publishing...
+                          </>
+                        ) : (
+                          "Publish All Products"
+                        )}
+                      </Button>
+                    </div>
                   </div>
 
                   <div className="bg-white border border-slate-100 rounded-2xl shadow-xl overflow-x-auto">
@@ -586,14 +672,25 @@ const BulkUploadProducts = () => {
           {activeTab === "grid" && (
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <Button
-                  onClick={addGridRow}
-                  variant="outline"
-                  className="font-bold border-slate-200 hover:bg-slate-50"
-                >
-                  <HiOutlinePlus className="h-4 w-4 mr-2" />
-                  Add New Row
-                </Button>
+                <div className="flex items-center gap-3">
+                  <Button
+                    onClick={addGridRow}
+                    variant="outline"
+                    className="font-bold border-slate-200 hover:bg-slate-50"
+                  >
+                    <HiOutlinePlus className="h-4 w-4 mr-2" />
+                    Add New Row
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsDeleteModalOpen(true)}
+                    disabled={isSaving}
+                    className="font-bold border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                  >
+                    <HiOutlineTrash className="h-4 w-4 mr-2" />
+                    Delete All
+                  </Button>
+                </div>
                 <Button
                   onClick={handlePublishGrid}
                   disabled={isSaving}
@@ -825,6 +922,44 @@ const BulkUploadProducts = () => {
           )}
         </>
       )}
+
+      {/* Delete All Confirmation Modal */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title="Confirm Delete All"
+        size="md"
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteModalOpen(false)}
+              className="font-bold"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmDeleteAll}
+              className="font-bold bg-rose-600 hover:bg-rose-700 text-white"
+            >
+              <HiOutlineTrash className="h-4 w-4 mr-2" />
+              Yes, Delete All
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-3 py-2 text-left">
+          <div className="flex items-center gap-3 text-rose-600 font-bold text-base">
+            <HiOutlineExclamationTriangle className="h-6 w-6 text-rose-500 flex-shrink-0" />
+            <span>Are you sure you want to delete all items?</span>
+          </div>
+          <p className="text-sm text-slate-600 font-medium leading-relaxed">
+            {activeTab === "csv"
+              ? "This will remove all uploaded Excel parsed products and clear the selected file. This action cannot be undone."
+              : "This will reset all rows in the grid table. This action cannot be undone."}
+          </p>
+        </div>
+      </Modal>
     </div>
   );
 };

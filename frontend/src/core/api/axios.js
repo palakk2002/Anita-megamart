@@ -23,7 +23,13 @@ const ROLE_TO_STORAGE_KEY = {
 // itself encodes the intended role. The primary source is the activeRoleStore.
 function tokenForRequestUrl(url) {
     if (!url) return null;
-    if (url.startsWith('/seller') || url === '/products/bulk' || url.startsWith('/products/bulk')) {
+    if (
+        url.startsWith('/seller') ||
+        url === '/products/bulk' ||
+        url.startsWith('/products/bulk') ||
+        url.startsWith('/seller/products/bulk') ||
+        url.startsWith('/products/seller')
+    ) {
         return getStoredAuthToken(STORAGE_KEYS.AUTH_SELLER) || getStoredAuthToken(STORAGE_KEYS.AUTH_ADMIN);
     }
     if (url.startsWith('/admin')) return getStoredAuthToken(STORAGE_KEYS.AUTH_ADMIN);

@@ -6,6 +6,7 @@ import Orders from "../pages/Orders";
 import {
   HiOutlineSquares2X2,
   HiOutlineCube,
+  HiOutlineDocumentArrowUp,
   HiOutlineCurrencyDollar,
   HiOutlineUser,
   HiOutlineTruck,
@@ -36,6 +37,7 @@ const Withdrawals = React.lazy(() => import("../pages/Withdrawals"));
 const navItems = [
   { label: "Dashboard", path: "/seller", icon: HiOutlineSquares2X2, end: true },
   { label: "Products", path: "/seller/products", icon: HiOutlineCube },
+  { label: "Bulk Upload", path: "/seller/products/bulk", icon: HiOutlineDocumentArrowUp },
   { label: "Stock", path: "/seller/inventory", icon: HiOutlineArchiveBox },
   { label: "Orders", path: "/seller/orders", icon: HiOutlineTruck },
   { label: "Returns", path: "/seller/returns", icon: HiOutlineArchiveBox },

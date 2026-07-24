@@ -8,7 +8,8 @@ import {
 import { getSellerProfile, updateSellerProfile, requestWithdrawal, getNearbySellers } from "../controller/sellerController.js";
 import { getSellerStats, getSellerEarnings } from "../controller/sellerStatsController.js";
 import { getSellerWalletSummaryController } from "../controller/adminFinanceController.js";
-import { verifyToken, allowRoles } from "../middleware/authMiddleware.js";
+import { bulkCreateProducts } from "../controller/productController.js";
+import { verifyToken, allowRoles, requireApprovedSeller } from "../middleware/authMiddleware.js";
 import {
     authRouteRateLimiter,
     createContentLengthGuard,
@@ -59,6 +60,15 @@ router.put(
     verifyToken,
     allowRoles("seller"),
     updateSellerProfile
+);
+
+// Product Bulk Creation Alias under /seller/products/bulk
+router.post(
+    "/products/bulk",
+    verifyToken,
+    allowRoles("seller", "admin"),
+    requireApprovedSeller,
+    bulkCreateProducts
 );
 
 // Analytics & Financials

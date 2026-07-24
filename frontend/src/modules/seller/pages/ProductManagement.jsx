@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
+import Button from "@shared/components/ui/Button";
 import Card from "@shared/components/ui/Card";
 import Badge from "@shared/components/ui/Badge";
 import {
@@ -125,7 +126,67 @@ const ProductManagement = () => {
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
+  const [selectedProductIds, setSelectedProductIds] = useState([]);
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+  const [bulkDeleteMode, setBulkDeleteMode] = useState("selected"); // "selected" | "all"
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
   const [viewingVariants, setViewingVariants] = useState(null);
+
+  const handleToggleSelectAll = () => {
+    if (selectedProductIds.length === safeProducts.length && safeProducts.length > 0) {
+      setSelectedProductIds([]);
+    } else {
+      setSelectedProductIds(safeProducts.map((p) => String(p._id || p.id)));
+    }
+  };
+
+  const handleToggleSelectProduct = (id) => {
+    const strId = String(id);
+    setSelectedProductIds((prev) =>
+      prev.includes(strId) ? prev.filter((i) => i !== strId) : [...prev, strId]
+    );
+  };
+
+  const handleOpenBulkDeleteModal = (mode) => {
+    setBulkDeleteMode(mode);
+    setIsBulkDeleteModalOpen(true);
+  };
+
+  const confirmBulkDelete = async () => {
+    setIsDeletingBulk(true);
+    try {
+      let idsToDelete = [];
+      if (bulkDeleteMode === "all") {
+        idsToDelete = safeProducts.map((p) => String(p._id || p.id));
+      } else {
+        idsToDelete = selectedProductIds;
+      }
+
+      if (idsToDelete.length === 0) {
+        toast.error("No products selected to delete");
+        setIsBulkDeleteModalOpen(false);
+        return;
+      }
+
+      await Promise.all(
+        idsToDelete.map((id) => sellerApi.deleteProduct(id).catch(() => null))
+      );
+
+      toast.success(
+        bulkDeleteMode === "all"
+          ? "All products deleted successfully"
+          : `${idsToDelete.length} product(s) deleted successfully`
+      );
+
+      setSelectedProductIds([]);
+      setIsBulkDeleteModalOpen(false);
+      fetchProducts(1);
+    } catch (error) {
+      toast.error("Failed to delete products");
+    } finally {
+      setIsDeletingBulk(false);
+    }
+  };
   const [isVariantsViewModalOpen, setIsVariantsViewModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [modalTab, setModalTab] = useState("general");
@@ -657,6 +718,37 @@ const ProductManagement = () => {
       </Card>
 
 
+      {/* Bulk Action Toolbar */}
+      {(safeProducts.length > 0 || selectedProductIds.length > 0) && (
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
+            <span>{selectedProductIds.length} item(s) selected</span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {selectedProductIds.length > 0 && (
+              <Button
+                onClick={() => handleOpenBulkDeleteModal("selected")}
+                className="font-bold bg-rose-600 hover:bg-rose-700 text-white text-xs px-4 py-2"
+              >
+                <HiOutlineTrash className="h-4 w-4 mr-1.5" />
+                Delete Selected ({selectedProductIds.length})
+              </Button>
+            )}
+            {safeProducts.length > 0 && (
+              <Button
+                variant="outline"
+                onClick={() => handleOpenBulkDeleteModal("all")}
+                className="font-bold border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700 text-xs px-4 py-2"
+              >
+                <HiOutlineTrash className="h-4 w-4 mr-1.5" />
+                Delete All Products
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Product Table */}
 
       <Card className="border-none shadow-xl ring-1 ring-slate-100 overflow-hidden rounded-xl">
@@ -664,6 +756,14 @@ const ProductManagement = () => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-100">
+                <th className="px-4 py-3 text-center w-12">
+                  <input
+                    type="checkbox"
+                    checked={safeProducts.length > 0 && selectedProductIds.length === safeProducts.length}
+                    onChange={handleToggleSelectAll}
+                    className="h-4 w-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500 cursor-pointer"
+                  />
+                </th>
                 <th className="px-6 py-3 text-left text-[10px] font-semibold text-gray-600 uppercase tracking-wider">
                   Product
                 </th>
@@ -695,6 +795,14 @@ const ProductManagement = () => {
                 <tr
                   key={p._id || p.id}
                   className="hover:bg-gray-50/50 transition-colors group border-b border-gray-100 last:border-b-0">
+                  <td className="px-4 py-4 text-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedProductIds.includes(String(p._id || p.id))}
+                      onChange={() => handleToggleSelectProduct(p._id || p.id)}
+                      className="h-4 w-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500 cursor-pointer"
+                    />
+                  </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-4">
                       <div className="h-14 w-14 rounded-lg overflow-hidden bg-slate-100 ring-1 ring-slate-200">
@@ -1384,6 +1492,57 @@ const ProductManagement = () => {
                 {itemToDelete?.name}
               </span>{" "}
               from the catalog.
+            </p>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Bulk Delete Modal */}
+      <Modal
+        isOpen={isBulkDeleteModalOpen}
+        onClose={() => setIsBulkDeleteModalOpen(false)}
+        title={bulkDeleteMode === "all" ? "Confirm Delete All Products" : "Confirm Bulk Delete"}
+        size="sm"
+        footer={
+          <div className="flex gap-4 justify-end w-full">
+            <button
+              onClick={() => setIsBulkDeleteModalOpen(false)}
+              disabled={isDeletingBulk}
+              className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-700 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmBulkDelete}
+              disabled={isDeletingBulk}
+              className="px-6 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-semibold shadow-lg shadow-rose-100 hover:bg-rose-700 transition-all active:scale-95 flex items-center"
+            >
+              {isDeletingBulk ? (
+                <>
+                  <HiOutlineArrowPath className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                bulkDeleteMode === "all" ? "Yes, Delete All Products" : `Delete ${selectedProductIds.length} Selected`
+              )}
+            </button>
+          </div>
+        }
+      >
+        <div className="px-6 py-6 flex flex-col items-center text-center space-y-5">
+          <div className="h-18 w-18 md:h-20 md:w-20 bg-rose-50 rounded-full flex items-center justify-center text-rose-500">
+            <HiOutlineTrash className="h-9 w-9 md:h-10 md:w-10" />
+          </div>
+          <div className="space-y-2 max-w-md">
+            <h4 className="text-lg font-semibold text-slate-900">
+              {bulkDeleteMode === "all"
+                ? "Are you sure you want to delete ALL products?"
+                : `Delete ${selectedProductIds.length} selected product(s)?`}
+            </h4>
+            <p className="text-sm text-slate-600 leading-relaxed">
+              {bulkDeleteMode === "all"
+                ? "This action cannot be undone. This will permanently delete ALL published products from your catalog."
+                : `This action cannot be undone. This will permanently delete the ${selectedProductIds.length} selected items from your catalog.`}
             </p>
           </div>
         </div>
