@@ -35,7 +35,6 @@ router.post("/adjust-stock", verifyToken, allowRoles("seller"), requireApprovedS
 router.get("/moderation", verifyToken, allowRoles("admin"), getModerationProducts);
 router.patch("/moderation/:id/approve", verifyToken, allowRoles("admin"), approveProduct);
 router.patch("/moderation/:id/reject", verifyToken, allowRoles("admin"), rejectProduct);
-router.get("/:id", optionalVerifyToken, getProductById);
 
 router.post(
     "/bulk",
@@ -44,6 +43,15 @@ router.post(
     requireApprovedSeller,
     bulkCreateProducts
 );
+router.post(
+    "/seller/bulk",
+    verifyToken,
+    allowRoles("seller", "admin"),
+    requireApprovedSeller,
+    bulkCreateProducts
+);
+
+router.get("/:id", optionalVerifyToken, getProductById);
 
 router.post(
     "/",

@@ -1308,9 +1308,11 @@ export const bulkCreateProducts = async (req, res) => {
 
     const createdProducts = [];
     const errors = [];
+    const validPreparedItems = [];
 
     const approvalConfig = await getProductApprovalConfig();
 
+    // 1. Validation & Data Normalization Phase
     for (let index = 0; index < products.length; index++) {
       const rawProduct = products[index];
       try {
@@ -1356,40 +1358,9 @@ export const bulkCreateProducts = async (req, res) => {
           continue;
         }
 
-        // Auto-generate slug
-        if (!productData.slug || productData.slug.trim() === "") {
-          productData.slug = await generateUniqueSlug(productData.name);
-        } else {
-          productData.slug = await generateUniqueSlug(productData.slug);
-        }
-
         productData.description = typeof productData.description === "string"
           ? productData.description.trim()
           : productData.description || "";
-
-        // Auto-generate SKU
-        if (!productData.sku || String(productData.sku).trim() === "") {
-          productData.sku = await generateUniqueSku(productData.name, 1);
-        } else {
-          productData.sku = await generateUniqueSku(productData.sku, 1);
-        }
-
-        // Handle base64 mainImage upload to Cloudinary
-        if (productData.mainImage && String(productData.mainImage).startsWith("data:image/")) {
-          try {
-            const base64Data = productData.mainImage.split(",")[1];
-            const mimeType = productData.mainImage.split(";")[0].split(":")[1];
-            const buffer = Buffer.from(base64Data, "base64");
-
-            const uploadedUrl = await uploadToCloudinary(buffer, "products", {
-              mimeType,
-              resourceType: "image",
-            });
-            productData.mainImage = uploadedUrl;
-          } catch (uploadErr) {
-            // fail-soft
-          }
-        }
 
         applyMediaFields(productData);
 
@@ -1414,20 +1385,12 @@ export const bulkCreateProducts = async (req, res) => {
             sku: productData.sku
           }];
         } else {
-          productData.variants = await Promise.all(
-            productData.variants.map(async (variant, idx) => {
-              const variantSku = variant?.sku && String(variant.sku).trim()
-                ? variant.sku
-                : makeProductSku(productData.name, idx + 1);
-              return {
-                ...variant,
-                price: Number(variant.price) || basePrice,
-                salePrice: Number(variant.salePrice) || 0,
-                stock: Number(variant.stock) || 0,
-                sku: await generateUniqueSku(variantSku, 1),
-              };
-            })
-          );
+          productData.variants = productData.variants.map((variant) => ({
+            ...variant,
+            price: Number(variant.price) || basePrice,
+            salePrice: Number(variant.salePrice) || 0,
+            stock: Number(variant.stock) || 0,
+          }));
         }
 
         let moderationUpdate = {};
@@ -1442,15 +1405,143 @@ export const bulkCreateProducts = async (req, res) => {
         }
         Object.assign(productData, moderationUpdate);
 
-        const product = await Product.create(productData);
-        if (product && product._id) {
-          await enqueueProductIndex(product._id.toString());
-          await invalidate(`cache:catalog:product:${product._id.toString()}`);
-          createdProducts.push(product);
-        }
+        validPreparedItems.push({ index, productData, basePrice, baseStock });
       } catch (err) {
         errors.push({ index, error: err.message });
       }
+    }
+
+    if (validPreparedItems.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No valid products provided.",
+        results: [],
+        errors
+      });
+    }
+
+    // 2. Batch Cloudinary Image Upload (Chunked Concurrency)
+    const itemsToUpload = validPreparedItems.filter(item => 
+      item.productData.mainImage && String(item.productData.mainImage).startsWith("data:image/")
+    );
+    const CHUNK_SIZE = 5;
+    for (let i = 0; i < itemsToUpload.length; i += CHUNK_SIZE) {
+      const chunk = itemsToUpload.slice(i, i + CHUNK_SIZE);
+      await Promise.all(chunk.map(async (item) => {
+        try {
+          const base64Data = item.productData.mainImage.split(",")[1];
+          const mimeType = item.productData.mainImage.split(";")[0].split(":")[1];
+          const buffer = Buffer.from(base64Data, "base64");
+          const uploadedUrl = await uploadToCloudinary(buffer, "products", {
+            mimeType,
+            resourceType: "image",
+          });
+          item.productData.mainImage = uploadedUrl;
+        } catch (uploadErr) {
+          // fail-soft
+        }
+      }));
+    }
+
+    // 3. Batch Slug and SKU Resolution
+    const baseSlugCandidates = [];
+    const baseSkuCandidates = [];
+
+    validPreparedItems.forEach((item) => {
+      const p = item.productData;
+      const rawSlugTarget = p.slug && p.slug.trim() ? p.slug : p.name;
+      const baseSlug = slugify(rawSlugTarget);
+      p._baseSlug = baseSlug;
+      baseSlugCandidates.push(baseSlug);
+
+      const rawSkuTarget = p.sku && String(p.sku).trim() ? p.sku : p.name;
+      const baseSku = String(rawSkuTarget).includes("-") ? String(rawSkuTarget).trim() : makeProductSku(p.name, 1);
+      p._baseSku = baseSku;
+      baseSkuCandidates.push(baseSku);
+
+      p.variants.forEach((variant, vIdx) => {
+        const vRawSku = variant?.sku && String(variant.sku).trim() ? variant.sku : makeProductSku(p.name, vIdx + 1);
+        const vBaseSku = String(vRawSku).includes("-") ? String(vRawSku).trim() : makeProductSku(p.name, vIdx + 1);
+        variant._baseSku = vBaseSku;
+        baseSkuCandidates.push(vBaseSku);
+      });
+    });
+
+    const uniqueBaseSlugs = Array.from(new Set(baseSlugCandidates));
+    const uniqueBaseSkus = Array.from(new Set(baseSkuCandidates));
+
+    const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    const existingSlugDocs = uniqueBaseSlugs.length > 0 ? await Product.find({
+      $or: uniqueBaseSlugs.map(s => ({ slug: new RegExp(`^${escapeRegex(s)}(-\\d+)?$`, "i") }))
+    }).select("slug").lean() : [];
+
+    const existingSkuDocs = uniqueBaseSkus.length > 0 ? await Product.find({
+      $or: uniqueBaseSkus.map(s => ({ sku: new RegExp(`^${escapeRegex(s)}(-\\d+)?$`, "i") }))
+    }).select("sku").lean() : [];
+
+    const usedSlugs = new Set(existingSlugDocs.map(d => String(d.slug).toLowerCase()));
+    const usedSkus = new Set(existingSkuDocs.map(d => String(d.sku).toLowerCase()));
+
+    validPreparedItems.forEach((item) => {
+      const p = item.productData;
+      
+      let slug = p._baseSlug;
+      let slugCount = 1;
+      while (usedSlugs.has(slug.toLowerCase())) {
+        slug = `${p._baseSlug}-${slugCount++}`;
+      }
+      usedSlugs.add(slug.toLowerCase());
+      p.slug = slug;
+      delete p._baseSlug;
+
+      let sku = p._baseSku;
+      let skuCount = 1;
+      while (usedSkus.has(sku.toLowerCase())) {
+        sku = `${p._baseSku}-${skuCount++}`;
+      }
+      usedSkus.add(sku.toLowerCase());
+      p.sku = sku;
+      delete p._baseSku;
+
+      p.variants = p.variants.map((v) => {
+        let vSku = v._baseSku;
+        let vSkuCount = 1;
+        while (usedSkus.has(vSku.toLowerCase())) {
+          vSku = `${v._baseSku}-${vSkuCount++}`;
+        }
+        usedSkus.add(vSku.toLowerCase());
+        const finalVariant = { ...v, sku: vSku };
+        delete finalVariant._baseSku;
+        return finalVariant;
+      });
+    });
+
+    // 4. Batch MongoDB Document Insertion
+    const docsToInsert = validPreparedItems.map(item => item.productData);
+    let insertedDocs = [];
+    try {
+      insertedDocs = await Product.insertMany(docsToInsert, { ordered: false });
+    } catch (insertErr) {
+      if (insertErr.insertedDocs && insertErr.insertedDocs.length > 0) {
+        insertedDocs = insertErr.insertedDocs;
+      }
+      logger.error("Bulk insert partially failed", { error: insertErr.message });
+    }
+
+    // 5. Batch Search Queue & Cache Invalidation
+    if (insertedDocs.length > 0) {
+      await Promise.all(
+        insertedDocs.map(async (doc) => {
+          try {
+            await enqueueProductIndex(doc._id.toString());
+            await invalidate(`cache:catalog:product:${doc._id.toString()}`);
+          } catch (e) {
+            // ignore async side-effect failure
+          }
+        })
+      );
+      createdProducts.push(...insertedDocs);
     }
 
     try {
