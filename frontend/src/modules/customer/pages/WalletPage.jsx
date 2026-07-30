@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowUpRight, ArrowDownLeft, ChevronLeft, Wallet, Plus, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { customerApi } from '../services/customerApi';
@@ -34,6 +34,32 @@ const WalletPage = () => {
     const [rechargeLoading, setRechargeLoading] = useState(false);
     const [verificationState, setVerificationState] = useState(null); // 'verifying' | 'success' | 'failed' | null
     const [verifiedAmount, setVerifiedAmount] = useState(0);
+
+    const walletMetrics = useMemo(() => {
+        let totalEarned = 0;
+        let usedCoins = 0;
+        let expiredCoins = 0;
+        const now = new Date();
+
+        transactions.forEach((tx) => {
+            const amt = Number(tx.coins || tx.amount || 0);
+            if (tx.status === 'Expired' || (tx.expiryDate && new Date(tx.expiryDate) < now && tx.type === 'credit')) {
+                expiredCoins += amt;
+            } else if (tx.type === 'credit') {
+                totalEarned += amt;
+            } else if (tx.type === 'debit') {
+                usedCoins += amt;
+            }
+        });
+
+        return {
+            walletBalance: balance,
+            availableCoins: balance,
+            usedCoins,
+            expiredCoins,
+            totalEarned,
+        };
+    }, [balance, transactions]);
 
     const fetchData = async () => {
         setLoading(true);
@@ -207,13 +233,14 @@ const WalletPage = () => {
             </div>
 
             <div className="max-w-2xl mx-auto px-4 pt-1 relative z-20 space-y-4">
+                {/* Primary Balance Header Card */}
                 <div className="bg-white rounded-xl border border-slate-200 p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4 shadow-sm">
                     <div>
-                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Available Balance</p>
+                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Wallet Balance</p>
                         <h2 className="text-4xl font-extrabold text-slate-900 mt-1">
-                            {loading ? '...' : `₹${(balance || 0).toLocaleString('en-IN')}`}
+                            {loading ? '...' : `₹${(walletMetrics.walletBalance || 0).toLocaleString('en-IN')}`}
                         </h2>
-                        <p className="text-xs text-slate-500 mt-1.5">Add money, claim bonuses, or use for checkout</p>
+                        <p className="text-xs text-slate-500 mt-1.5">Use up to 25% wallet coins at checkout</p>
                     </div>
                     <div className="flex flex-wrap items-center gap-3">
                         <button
@@ -223,15 +250,26 @@ const WalletPage = () => {
                             <Plus size={16} />
                             Add Money via Razorpay
                         </button>
-                        {!loading && (
-                            <div className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider ${
-                                transactions.some(t => t.title === 'Welcome Bonus')
-                                    ? 'bg-brand-50 text-brand-700 border border-brand-100'
-                                    : 'bg-slate-100 text-slate-500 border border-slate-200'
-                            }`}>
-                                Welcome Bonus: {transactions.some(t => t.title === 'Welcome Bonus') ? 'Credited' : 'Not Credited'}
-                            </div>
-                        )}
+                    </div>
+                </div>
+
+                {/* 4 Metrics Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="bg-white rounded-xl border border-slate-200 p-3.5 text-center">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Available Coins</p>
+                        <h3 className="text-lg font-extrabold text-emerald-600 mt-0.5">{loading ? '...' : walletMetrics.availableCoins}</h3>
+                    </div>
+                    <div className="bg-white rounded-xl border border-slate-200 p-3.5 text-center">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Used Coins</p>
+                        <h3 className="text-lg font-extrabold text-blue-600 mt-0.5">{loading ? '...' : walletMetrics.usedCoins}</h3>
+                    </div>
+                    <div className="bg-white rounded-xl border border-slate-200 p-3.5 text-center">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Expired Coins</p>
+                        <h3 className="text-lg font-extrabold text-amber-600 mt-0.5">{loading ? '...' : walletMetrics.expiredCoins}</h3>
+                    </div>
+                    <div className="bg-white rounded-xl border border-slate-200 p-3.5 text-center">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Earned</p>
+                        <h3 className="text-lg font-extrabold text-indigo-600 mt-0.5">{loading ? '...' : walletMetrics.totalEarned}</h3>
                     </div>
                 </div>
 
@@ -247,9 +285,9 @@ const WalletPage = () => {
                         </div>
                     ) : transactions.length === 0 ? (
                         <div className="py-12 flex flex-col items-center justify-center text-center px-6">
-                            <p className="text-sm font-semibold text-slate-500 mb-1">No wallet payments yet</p>
+                            <p className="text-sm font-semibold text-slate-500 mb-1">No wallet transactions yet</p>
                             <p className="text-xs text-slate-400">
-                                Orders paid using wallet will appear here.
+                                Wallet credits, debits, and orders will appear here.
                             </p>
                         </div>
                     ) : (
@@ -257,19 +295,26 @@ const WalletPage = () => {
                             {transactions.map((tx) => (
                                 <div key={tx._id} className="px-4 py-3.5 flex items-center justify-between hover:bg-slate-50 transition-colors">
                                     <div className="flex items-center gap-3">
-                                        <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${tx.type === 'credit' ? 'bg-brand-50 text-brand-600' : 'bg-slate-100 text-slate-700'}`}>
+                                        <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${tx.type === 'credit' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-700'}`}>
                                             {tx.type === 'credit' ? <ArrowDownLeft size={19} /> : <ArrowUpRight size={19} />}
                                         </div>
                                         <div>
-                                            <h4 className="font-semibold text-slate-800 text-sm">{tx.title}</h4>
-                                            <p className="text-[11px] text-slate-500">{formatDate(tx.date)}</p>
-                                            {tx.orderId && (
-                                                <p className="text-[10px] text-slate-500">#{tx.orderId}</p>
-                                            )}
+                                            <div className="flex items-center gap-2">
+                                                <h4 className="font-semibold text-slate-800 text-sm">{tx.title || tx.transactionType}</h4>
+                                                <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-100 text-slate-600 uppercase">
+                                                    {tx.status || 'Settled'}
+                                                </span>
+                                            </div>
+                                            <p className="text-[11px] text-slate-500 mt-0.5">
+                                                {tx.reason ? tx.reason : formatDate(tx.date)}
+                                            </p>
+                                            <p className="text-[10px] text-slate-400">
+                                                {formatDate(tx.date)} {tx.orderId ? `• Order #${tx.orderId}` : ''}
+                                            </p>
                                         </div>
                                     </div>
-                                    <div className={`text-sm font-semibold ${tx.type === 'credit' ? 'text-brand-600' : 'text-slate-900'}`}>
-                                        {tx.type === 'credit' ? '+' : '-'}₹{(tx.amount || 0).toLocaleString('en-IN')}
+                                    <div className={`text-sm font-bold ${tx.type === 'credit' ? 'text-emerald-600' : 'text-slate-900'}`}>
+                                        {tx.type === 'credit' ? '+' : '-'}{(tx.coins || tx.amount || 0).toLocaleString('en-IN')} Coins
                                     </div>
                                 </div>
                             ))}

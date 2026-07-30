@@ -242,7 +242,8 @@ const CheckoutPage = () => {
     if (useWallet && user?.walletBalance && pricingPreview?.grandTotal) {
       const maxAvailable = Number(user.walletBalance || 0);
       const totalToPay = Number(pricingPreview.grandTotal || 0);
-      setWalletAmountToUse(Math.min(maxAvailable, totalToPay));
+      const maxAllowedFromWallet = Math.floor(maxAvailable * 0.25);
+      setWalletAmountToUse(Math.min(totalToPay, maxAllowedFromWallet));
     } else {
       setWalletAmountToUse(0);
     }

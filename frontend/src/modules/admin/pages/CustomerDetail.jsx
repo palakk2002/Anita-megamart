@@ -26,7 +26,12 @@ import {
     Bell,
     Package,
     IndianRupee,
-    CheckCircle2
+    CheckCircle2,
+    Wallet,
+    Plus,
+    Minus,
+    Coins,
+    Clock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Modal from '@shared/components/ui/Modal';
@@ -45,6 +50,18 @@ const CustomerDetail = () => {
     const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
     const [isRestrictModalOpen, setIsRestrictModalOpen] = useState(false);
 
+    // Wallet states
+    const [walletData, setWalletData] = useState({ currentBalance: 0, availableCoins: 0, totalEarned: 0, totalUsed: 0, expiredCoins: 0 });
+    const [walletHistory, setWalletHistory] = useState([]);
+    const [walletLoading, setWalletLoading] = useState(true);
+    const [isAddCoinsModalOpen, setIsAddCoinsModalOpen] = useState(false);
+    const [isRemoveCoinsModalOpen, setIsRemoveCoinsModalOpen] = useState(false);
+    const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+    const [submittingWallet, setSubmittingWallet] = useState(false);
+
+    const [addCoinsForm, setAddCoinsForm] = useState({ coins: '', reason: '', remarks: '', expiryDate: '' });
+    const [removeCoinsForm, setRemoveCoinsForm] = useState({ coins: '', reason: '', remarks: '' });
+
     // Form states
     const [notifMessage, setNotifMessage] = useState('');
     const [notes, setNotes] = useState('Prefer morning deliveries. Use the building entrance on the north side.');
@@ -54,6 +71,27 @@ const CustomerDetail = () => {
     const [orders, setOrders] = useState([]);
 
     const [editForm, setEditForm] = useState({ name: '', email: '', phone: '' });
+
+    const fetchWalletData = async () => {
+        try {
+            setWalletLoading(true);
+            const [walletRes, historyRes] = await Promise.all([
+                adminApi.getUserWallet(id),
+                adminApi.getUserWalletHistory(id, { page: 1, limit: 100 })
+            ]);
+            if (walletRes.data?.success) {
+                setWalletData(walletRes.data.result || walletRes.data.data);
+            }
+            if (historyRes.data?.success) {
+                const hData = historyRes.data.result || historyRes.data.data;
+                setWalletHistory(Array.isArray(hData?.items) ? hData.items : []);
+            }
+        } catch (error) {
+            console.error("Error fetching wallet details:", error);
+        } finally {
+            setWalletLoading(false);
+        }
+    };
 
     useEffect(() => {
         const fetchCustomerDetails = async () => {
@@ -77,8 +115,82 @@ const CustomerDetail = () => {
                 setLoading(false);
             }
         };
-        if (id) fetchCustomerDetails();
+        if (id) {
+            fetchCustomerDetails();
+            fetchWalletData();
+        }
     }, [id]);
+
+    const handleAddCoinsSubmit = async (e) => {
+        e.preventDefault();
+        const coinsNum = Number(addCoinsForm.coins);
+        if (!coinsNum || coinsNum <= 0) {
+            showToast('Please enter a valid positive coin amount', 'error');
+            return;
+        }
+        if (!addCoinsForm.reason.trim()) {
+            showToast('Please enter a reason for adding coins', 'error');
+            return;
+        }
+        try {
+            setSubmittingWallet(true);
+            const res = await adminApi.addWalletCoins({
+                userId: id,
+                coins: coinsNum,
+                reason: addCoinsForm.reason.trim(),
+                remarks: addCoinsForm.remarks.trim(),
+                expiryDate: addCoinsForm.expiryDate || null,
+            });
+            if (res.data?.success) {
+                showToast(res.data.message || `Successfully credited ${coinsNum} coins`, 'success');
+                setIsAddCoinsModalOpen(false);
+                setAddCoinsForm({ coins: '', reason: '', remarks: '', expiryDate: '' });
+                await fetchWalletData();
+            } else {
+                showToast(res.data?.message || 'Failed to credit coins', 'error');
+            }
+        } catch (err) {
+            console.error('Error adding coins:', err);
+            showToast(err.response?.data?.message || err.message || 'Failed to credit coins', 'error');
+        } finally {
+            setSubmittingWallet(false);
+        }
+    };
+
+    const handleRemoveCoinsSubmit = async (e) => {
+        e.preventDefault();
+        const coinsNum = Number(removeCoinsForm.coins);
+        if (!coinsNum || coinsNum <= 0) {
+            showToast('Please enter a valid positive coin amount', 'error');
+            return;
+        }
+        if (!removeCoinsForm.reason.trim()) {
+            showToast('Please enter a reason for removing coins', 'error');
+            return;
+        }
+        try {
+            setSubmittingWallet(true);
+            const res = await adminApi.removeWalletCoins({
+                userId: id,
+                coins: coinsNum,
+                reason: removeCoinsForm.reason.trim(),
+                remarks: removeCoinsForm.remarks.trim(),
+            });
+            if (res.data?.success) {
+                showToast(res.data.message || `Successfully debited ${coinsNum} coins`, 'success');
+                setIsRemoveCoinsModalOpen(false);
+                setRemoveCoinsForm({ coins: '', reason: '', remarks: '' });
+                await fetchWalletData();
+            } else {
+                showToast(res.data?.message || 'Failed to debit coins', 'error');
+            }
+        } catch (err) {
+            console.error('Error removing coins:', err);
+            showToast(err.response?.data?.message || err.message || 'Failed to debit coins', 'error');
+        } finally {
+            setSubmittingWallet(false);
+        }
+    };
 
     const handleRefresh = () => {
         setIsRefreshing(true);
@@ -271,8 +383,70 @@ const CustomerDetail = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {/* Delivery & Order History */}
+                {/* Wallet, Delivery & Order History */}
                 <div className="lg:col-span-2 space-y-8">
+                    {/* Wallet Management Section */}
+                    <Card className="border-none shadow-xl ring-1 ring-slate-100 bg-white rounded-xl p-5">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100">
+                            <div>
+                                <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                                    <Wallet className="h-4 w-4 text-emerald-600" />
+                                    Wallet Management
+                                </h4>
+                                <p className="text-[11px] font-semibold text-slate-400 mt-1">
+                                    View balance, add/remove coins manually, and track complete transaction history.
+                                </p>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <button
+                                    onClick={() => setIsAddCoinsModalOpen(true)}
+                                    className="flex items-center gap-1.5 px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95"
+                                >
+                                    <Plus className="h-3.5 w-3.5" />
+                                    Add Coins
+                                </button>
+                                <button
+                                    onClick={() => setIsRemoveCoinsModalOpen(true)}
+                                    className="flex items-center gap-1.5 px-3.5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95"
+                                >
+                                    <Minus className="h-3.5 w-3.5" />
+                                    Remove Coins
+                                </button>
+                                <button
+                                    onClick={() => setIsHistoryModalOpen(true)}
+                                    className="flex items-center gap-1.5 px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all shadow-sm"
+                                >
+                                    <History className="h-3.5 w-3.5 text-slate-500" />
+                                    View Wallet History
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Wallet Metrics */}
+                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                            <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-center">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Current Balance</p>
+                                <h5 className="text-lg font-extrabold text-slate-900 mt-1">₹{walletData.currentBalance || 0}</h5>
+                            </div>
+                            <div className="p-3 bg-emerald-50/70 rounded-xl border border-emerald-100 text-center">
+                                <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Available Coins</p>
+                                <h5 className="text-lg font-extrabold text-emerald-700 mt-1">{walletData.availableCoins || walletData.currentBalance || 0}</h5>
+                            </div>
+                            <div className="p-3 bg-blue-50/70 rounded-xl border border-blue-100 text-center">
+                                <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Used Coins</p>
+                                <h5 className="text-lg font-extrabold text-blue-700 mt-1">{walletData.totalUsed || 0}</h5>
+                            </div>
+                            <div className="p-3 bg-amber-50/70 rounded-xl border border-amber-100 text-center">
+                                <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Expired Coins</p>
+                                <h5 className="text-lg font-extrabold text-amber-700 mt-1">{walletData.expiredCoins || 0}</h5>
+                            </div>
+                            <div className="p-3 bg-indigo-50/70 rounded-xl border border-indigo-100 text-center col-span-2 sm:col-span-1">
+                                <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">Total Earned</p>
+                                <h5 className="text-lg font-extrabold text-indigo-700 mt-1">{walletData.totalEarned || 0}</h5>
+                            </div>
+                        </div>
+                    </Card>
+
                     {/* Delivery addresses */}
                     <Card className="border-none shadow-xl ring-1 ring-slate-100 bg-white rounded-xl p-4">
                         <div className="flex items-center justify-between mb-8">
@@ -519,6 +693,199 @@ const CustomerDetail = () => {
                             CONFIRM
                         </button>
                     </div>
+                </div>
+            </Modal>
+
+            {/* Add Coins Modal */}
+            <Modal isOpen={isAddCoinsModalOpen} onClose={() => setIsAddCoinsModalOpen(false)} title="Add Coins to User Wallet">
+                <form onSubmit={handleAddCoinsSubmit} className="space-y-4">
+                    <div className="p-3 bg-emerald-50 rounded-xl flex items-center gap-3">
+                        <Plus className="h-5 w-5 text-emerald-600 shrink-0" />
+                        <p className="text-xs font-semibold text-emerald-800">
+                            Manually credit goodwill coins or reissue expired bonus to this user.
+                        </p>
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Coins Amount *</label>
+                        <input
+                            type="number"
+                            min="1"
+                            placeholder="e.g. 100"
+                            value={addCoinsForm.coins}
+                            onChange={(e) => setAddCoinsForm({ ...addCoinsForm, coins: e.target.value })}
+                            required
+                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500/20"
+                        />
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Reason *</label>
+                        <input
+                            type="text"
+                            placeholder="e.g. Goodwill bonus reissue / Compensation"
+                            value={addCoinsForm.reason}
+                            onChange={(e) => setAddCoinsForm({ ...addCoinsForm, reason: e.target.value })}
+                            required
+                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500/20"
+                        />
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Remarks</label>
+                        <textarea
+                            placeholder="Additional internal audit notes..."
+                            value={addCoinsForm.remarks}
+                            onChange={(e) => setAddCoinsForm({ ...addCoinsForm, remarks: e.target.value })}
+                            rows="2"
+                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-emerald-500/20"
+                        />
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Expiry Date (Optional)</label>
+                        <input
+                            type="date"
+                            value={addCoinsForm.expiryDate}
+                            onChange={(e) => setAddCoinsForm({ ...addCoinsForm, expiryDate: e.target.value })}
+                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500/20"
+                        />
+                    </div>
+                    <div className="flex gap-3 pt-2">
+                        <button
+                            type="button"
+                            onClick={() => setIsAddCoinsModalOpen(false)}
+                            className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-slate-200"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={submittingWallet}
+                            className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg active:scale-95 transition-all"
+                        >
+                            {submittingWallet ? 'Crediting...' : 'Confirm Add Coins'}
+                        </button>
+                    </div>
+                </form>
+            </Modal>
+
+            {/* Remove Coins Modal */}
+            <Modal isOpen={isRemoveCoinsModalOpen} onClose={() => setIsRemoveCoinsModalOpen(false)} title="Remove Coins from User Wallet">
+                <form onSubmit={handleRemoveCoinsSubmit} className="space-y-4">
+                    <div className="p-3 bg-rose-50 rounded-xl flex items-center gap-3">
+                        <Minus className="h-5 w-5 text-rose-600 shrink-0" />
+                        <p className="text-xs font-semibold text-rose-800">
+                            Current available balance: <span className="font-extrabold">₹{walletData.currentBalance || 0}</span>. Deductions cannot exceed available balance.
+                        </p>
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Coins Amount *</label>
+                        <input
+                            type="number"
+                            min="1"
+                            max={walletData.currentBalance || 0}
+                            placeholder="e.g. 50"
+                            value={removeCoinsForm.coins}
+                            onChange={(e) => setRemoveCoinsForm({ ...removeCoinsForm, coins: e.target.value })}
+                            required
+                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-rose-500/20"
+                        />
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Reason *</label>
+                        <input
+                            type="text"
+                            placeholder="e.g. Manual correction / Fraud reversal"
+                            value={removeCoinsForm.reason}
+                            onChange={(e) => setRemoveCoinsForm({ ...removeCoinsForm, reason: e.target.value })}
+                            required
+                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-rose-500/20"
+                        />
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Remarks</label>
+                        <textarea
+                            placeholder="Additional internal audit notes..."
+                            value={removeCoinsForm.remarks}
+                            onChange={(e) => setRemoveCoinsForm({ ...removeCoinsForm, remarks: e.target.value })}
+                            rows="2"
+                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-rose-500/20"
+                        />
+                    </div>
+                    <div className="flex gap-3 pt-2">
+                        <button
+                            type="button"
+                            onClick={() => setIsRemoveCoinsModalOpen(false)}
+                            className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-slate-200"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={submittingWallet}
+                            className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg active:scale-95 transition-all"
+                        >
+                            {submittingWallet ? 'Debiting...' : 'Confirm Remove Coins'}
+                        </button>
+                    </div>
+                </form>
+            </Modal>
+
+            {/* Wallet History Modal */}
+            <Modal isOpen={isHistoryModalOpen} onClose={() => setIsHistoryModalOpen(false)} title="Complete Wallet History">
+                <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+                    {walletHistory.length === 0 ? (
+                        <div className="py-12 text-center text-slate-400 font-semibold text-xs">
+                            No wallet transactions recorded yet for this customer.
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-xs border-collapse">
+                                <thead>
+                                    <tr className="border-b border-slate-200 text-slate-400 uppercase text-[10px] font-black tracking-wider">
+                                        <th className="py-2.5 px-3">Date</th>
+                                        <th className="py-2.5 px-3">Type</th>
+                                        <th className="py-2.5 px-3">Coins</th>
+                                        <th className="py-2.5 px-3">Reason</th>
+                                        <th className="py-2.5 px-3">Expiry</th>
+                                        <th className="py-2.5 px-3">Created By</th>
+                                        <th className="py-2.5 px-3">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
+                                    {walletHistory.map((tx) => (
+                                        <tr key={tx._id} className="hover:bg-slate-50 transition-colors">
+                                            <td className="py-3 px-3 text-slate-500 whitespace-nowrap">
+                                                {new Date(tx.date || tx.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                            </td>
+                                            <td className="py-3 px-3 uppercase font-extrabold text-[10px]">
+                                                <Badge
+                                                    variant={tx.direction === 'CREDIT' || tx.type === 'ADMIN_CREDIT' || tx.type === 'WELCOME_BONUS' ? 'success' : 'danger'}
+                                                    className="text-[9px] font-black"
+                                                >
+                                                    {tx.type || (tx.coins > 0 ? 'CREDIT' : 'DEBIT')}
+                                                </Badge>
+                                            </td>
+                                            <td className={`py-3 px-3 font-extrabold ${tx.direction === 'CREDIT' || tx.type === 'ADMIN_CREDIT' || tx.type === 'WELCOME_BONUS' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                {tx.direction === 'CREDIT' || tx.type === 'ADMIN_CREDIT' || tx.type === 'WELCOME_BONUS' ? '+' : '-'}{tx.coins || tx.amount || 0}
+                                            </td>
+                                            <td className="py-3 px-3 max-w-xs truncate" title={tx.reason}>
+                                                {tx.reason || 'N/A'}
+                                            </td>
+                                            <td className="py-3 px-3 text-slate-500 whitespace-nowrap">
+                                                {tx.expiryDate ? new Date(tx.expiryDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Never'}
+                                            </td>
+                                            <td className="py-3 px-3 text-slate-500 whitespace-nowrap">
+                                                {tx.createdBy || 'System'}
+                                            </td>
+                                            <td className="py-3 px-3">
+                                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase ${tx.status === 'Settled' || tx.status === 'Completed' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
+                                                    {tx.status || 'Settled'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                 </div>
             </Modal>
         </div>

@@ -55,22 +55,44 @@ const transactionSchema = new mongoose.Schema(
                 "Wallet Payment",
                 "Wallet Refund",
                 "Wallet Recharge",
+                "WELCOME_BONUS",
+                "ADMIN_CREDIT",
+                "ADMIN_DEBIT",
+                "ORDER_REDEEM",
+                "CASHBACK",
+                "REFERRAL",
             ],
             required: true,
         },
         amount: {
-            type: Number, // Positive for earnings, negative for withdrawals/refunds
+            type: Number, // Positive for earnings/credits, negative for debits/withdrawals
             required: true,
         },
         status: {
             type: String,
-            enum: ["Pending", "Processing", "Settled", "Failed"],
-            default: "Pending",
+            enum: ["Pending", "Processing", "Settled", "Failed", "Expired"],
+            default: "Settled",
         },
         reference: {
             type: String, // TXN ID or Order ID
             unique: true,
             required: true,
+        },
+        reason: {
+            type: String,
+            trim: true,
+        },
+        remarks: {
+            type: String,
+            trim: true,
+        },
+        expiryDate: {
+            type: Date,
+            default: null,
+        },
+        createdBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
         },
         date: {
             type: Date,

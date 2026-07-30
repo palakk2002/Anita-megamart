@@ -34,7 +34,11 @@ import {
     getSellers,
     getSellerLocations,
     getPlatformSettings,
-    updatePlatformSettings
+    updatePlatformSettings,
+    getUserWalletDetails,
+    getUserWalletHistoryController,
+    addCoinsController,
+    removeCoinsController
 } from "../controller/adminController.js";
 import {
     exportAdminFinanceStatementController,
@@ -147,6 +151,10 @@ router.put(
 );
 router.get("/users", verifyToken, allowRoles("admin"), getUsers);
 router.get("/users/:id", verifyToken, allowRoles("admin"), getUserById);
+router.get("/users/:id/wallet", verifyToken, allowRoles("admin"), getUserWalletDetails);
+router.get("/users/:id/wallet/history", verifyToken, allowRoles("admin"), getUserWalletHistoryController);
+router.post("/wallet/add-coins", verifyToken, allowRoles("admin"), addCoinsController);
+router.post("/wallet/remove-coins", verifyToken, allowRoles("admin"), removeCoinsController);
 router.get("/sellers", verifyToken, allowRoles("admin"), getSellers);
 router.get("/sellers/locations", verifyToken, allowRoles("admin"), getSellerLocations);
 router.get("/sellers/active", verifyToken, allowRoles("admin"), getActiveSellers);

@@ -3,8 +3,12 @@ import Payout from "../../models/payout.js";
 import Order from "../../models/order.js";
 import User from "../../models/customer.js";
 import Transaction from "../../models/transaction.js";
+import Notification from "../../models/notification.js";
+import FinanceAuditLog from "../../models/financeAuditLog.js";
 import {
   LEDGER_DIRECTION,
+  LEDGER_TRANSACTION_TYPE,
+  FINANCE_AUDIT_ACTION,
   ORDER_PAYMENT_STATUS,
   OWNER_TYPE,
   PAYOUT_STATUS,
@@ -650,3 +654,217 @@ export async function getCustomerBalance(userId, { session } = {}) {
     return 0;
   }
 }
+
+/**
+ * Admin Wallet Management: Get full summary of user wallet
+ */
+export async function getUserWalletSummary(userId) {
+  const currentBalance = await getCustomerBalance(userId);
+  const transactions = await Transaction.find({ user: userId, userModel: "User" }).lean();
+
+  let totalEarned = 0;
+  let totalUsed = 0;
+  let expiredCoins = 0;
+
+  const now = new Date();
+
+  transactions.forEach((tx) => {
+    const amount = Number(tx.amount || 0);
+    if (tx.status === "Expired" || (tx.expiryDate && new Date(tx.expiryDate) < now && amount > 0)) {
+      expiredCoins += Math.abs(amount);
+    } else if (amount > 0) {
+      totalEarned += amount;
+    } else if (amount < 0) {
+      totalUsed += Math.abs(amount);
+    }
+  });
+
+  return {
+    currentBalance: roundCurrency(currentBalance),
+    availableCoins: roundCurrency(currentBalance),
+    totalEarned: roundCurrency(totalEarned),
+    totalUsed: roundCurrency(totalUsed),
+    expiredCoins: roundCurrency(expiredCoins),
+    walletSummary: {
+      currentBalance: roundCurrency(currentBalance),
+      totalEarned: roundCurrency(totalEarned),
+      totalUsed: roundCurrency(totalUsed),
+      expiredCoins: roundCurrency(expiredCoins),
+      totalTransactions: transactions.length,
+    },
+  };
+}
+
+/**
+ * Admin Wallet Management: Get user wallet transaction history
+ */
+export async function getUserWalletHistory(userId, { page = 1, limit = 20 } = {}) {
+  const pageNum = Math.max(1, parseInt(page, 10));
+  const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10)));
+  const skip = (pageNum - 1) * limitNum;
+
+  const [transactions, total] = await Promise.all([
+    Transaction.find({ user: userId, userModel: "User" })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .populate("createdBy", "name email role")
+      .populate("order", "orderId")
+      .lean(),
+    Transaction.countDocuments({ user: userId, userModel: "User" }),
+  ]);
+
+  const items = transactions.map((t) => ({
+    _id: t._id,
+    type: t.type || (t.amount > 0 ? "ADMIN_CREDIT" : "ADMIN_DEBIT"),
+    coins: Math.abs(t.amount || 0),
+    amount: Math.abs(t.amount || 0),
+    direction: t.amount >= 0 ? "CREDIT" : "DEBIT",
+    reason: t.reason || t.meta?.description || t.type || "N/A",
+    remarks: t.remarks || "",
+    expiryDate: t.expiryDate || null,
+    createdBy: t.createdBy ? (t.createdBy.name || t.createdBy.email) : "System",
+    status: t.status || "Settled",
+    date: t.createdAt || t.date,
+    createdAt: t.createdAt || t.date,
+    reference: t.reference,
+    orderId: t.order?.orderId,
+  }));
+
+  return {
+    items,
+    total,
+    page: pageNum,
+    limit: limitNum,
+    totalPages: Math.ceil(total / limitNum) || 1,
+  };
+}
+
+/**
+ * Admin Wallet Management: Manually credit coins to user
+ */
+export async function adminCreditCoins({ userId, coins, reason, remarks, expiryDate, adminId }) {
+  const normalizedCoins = roundCurrency(Number(coins));
+  if (!normalizedCoins || normalizedCoins <= 0) {
+    throw new Error("Coins amount must be greater than 0");
+  }
+
+  // 1. Credit wallet canonically
+  await creditWallet({
+    ownerType: OWNER_TYPE.CUSTOMER,
+    ownerId: userId,
+    amount: normalizedCoins,
+    ledgerType: LEDGER_TRANSACTION_TYPE.ADMIN_CREDIT,
+    ledgerDescription: reason || "Admin credited coins",
+    metadata: { reason, remarks, adminId, expiryDate },
+  });
+
+  // 2. Create Transaction record
+  const transaction = await Transaction.create({
+    user: userId,
+    userModel: "User",
+    type: "ADMIN_CREDIT",
+    amount: normalizedCoins,
+    status: "Settled",
+    reference: `ADM-CRED-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`,
+    reason: reason || "Admin Manual Credit",
+    remarks: remarks || "",
+    expiryDate: expiryDate ? new Date(expiryDate) : null,
+    createdBy: adminId || null,
+    date: new Date(),
+  });
+
+  // 3. Store Finance Audit Log
+  await FinanceAuditLog.create({
+    action: FINANCE_AUDIT_ACTION.ADMIN_WALLET_CREDIT,
+    actorType: OWNER_TYPE.ADMIN,
+    actorId: adminId || null,
+    metadata: { userId, coins: normalizedCoins, reason, remarks, expiryDate },
+    note: `Admin credited ${normalizedCoins} coins to user ${userId}`,
+  });
+
+  // 4. Send notification to user
+  await Notification.create({
+    recipient: userId,
+    recipientModel: "User",
+    title: "Wallet Credited",
+    message: `🎉 Admin has credited ${normalizedCoins} coins to your wallet.`,
+    type: "system",
+    data: { coins: normalizedCoins, reason, transactionId: transaction._id },
+  });
+
+  const walletSummary = await getUserWalletSummary(userId);
+  return {
+    success: true,
+    message: `Successfully credited ${normalizedCoins} coins`,
+    transaction,
+    summary: walletSummary,
+  };
+}
+
+/**
+ * Admin Wallet Management: Manually debit coins from user
+ */
+export async function adminDebitCoins({ userId, coins, reason, remarks, adminId }) {
+  const normalizedCoins = roundCurrency(Number(coins));
+  if (!normalizedCoins || normalizedCoins <= 0) {
+    throw new Error("Coins amount must be greater than 0");
+  }
+
+  const currentBalance = await getCustomerBalance(userId);
+  if (currentBalance < normalizedCoins) {
+    throw new Error(`Admin Debit cannot exceed available balance (Current available: ₹${currentBalance})`);
+  }
+
+  // 1. Debit wallet canonically
+  await debitWallet({
+    ownerType: OWNER_TYPE.CUSTOMER,
+    ownerId: userId,
+    amount: normalizedCoins,
+    ledgerType: LEDGER_TRANSACTION_TYPE.ADMIN_DEBIT,
+    ledgerDescription: reason || "Admin debited coins",
+    metadata: { reason, remarks, adminId },
+  });
+
+  // 2. Create Transaction record
+  const transaction = await Transaction.create({
+    user: userId,
+    userModel: "User",
+    type: "ADMIN_DEBIT",
+    amount: -normalizedCoins,
+    status: "Settled",
+    reference: `ADM-DEB-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`,
+    reason: reason || "Admin Manual Debit",
+    remarks: remarks || "",
+    createdBy: adminId || null,
+    date: new Date(),
+  });
+
+  // 3. Store Finance Audit Log
+  await FinanceAuditLog.create({
+    action: FINANCE_AUDIT_ACTION.ADMIN_WALLET_DEBIT,
+    actorType: OWNER_TYPE.ADMIN,
+    actorId: adminId || null,
+    metadata: { userId, coins: normalizedCoins, reason, remarks },
+    note: `Admin debited ${normalizedCoins} coins from user ${userId}`,
+  });
+
+  // 4. Send notification to user
+  await Notification.create({
+    recipient: userId,
+    recipientModel: "User",
+    title: "Wallet Updated",
+    message: `Wallet updated. ${normalizedCoins} coins have been deducted.`,
+    type: "system",
+    data: { coins: normalizedCoins, reason, transactionId: transaction._id },
+  });
+
+  const walletSummary = await getUserWalletSummary(userId);
+  return {
+    success: true,
+    message: `Successfully debited ${normalizedCoins} coins`,
+    transaction,
+    summary: walletSummary,
+  };
+}
+
