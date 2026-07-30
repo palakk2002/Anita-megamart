@@ -110,15 +110,30 @@ export const getWalletTransactions = async (req, res) => {
       Transaction.countDocuments({ user: userId, userModel: "User" }),
     ]);
 
-    const items = transactions.map((t) => ({
-      _id: t._id,
-      type: t.amount > 0 ? "credit" : "debit",
-      title: t.type === "Refund" ? "Refund" : (t.type === "Bonus" ? "Welcome Bonus" : t.type),
-      amount: Math.abs(t.amount),
-      date: t.createdAt,
-      reference: t.reference,
-      orderId: t.order?.orderId,
-    }));
+    const items = transactions.map((t) => {
+      const isCredit = t.amount >= 0;
+      let formattedTitle = t.type;
+      if (t.type === "Refund" || t.type === "Wallet Refund") formattedTitle = "Refund";
+      else if (t.type === "Bonus" || t.type === "WELCOME_BONUS") formattedTitle = "Welcome Bonus";
+      else if (t.type === "ADMIN_CREDIT") formattedTitle = "Admin Credit";
+      else if (t.type === "ADMIN_DEBIT") formattedTitle = "Admin Debit";
+      else if (t.type === "ORDER_REDEEM" || t.type === "Wallet Payment") formattedTitle = "Order Payment";
+      else if (t.type === "Wallet Recharge") formattedTitle = "Wallet Recharge";
+
+      return {
+        _id: t._id,
+        type: isCredit ? "credit" : "debit",
+        transactionType: t.type || (isCredit ? "ADMIN_CREDIT" : "ADMIN_DEBIT"),
+        title: formattedTitle,
+        coins: Math.abs(t.amount || 0),
+        amount: Math.abs(t.amount || 0),
+        reason: t.reason || t.remarks || t.meta?.description || formattedTitle,
+        status: t.status || "Settled",
+        date: t.createdAt || t.date,
+        reference: t.reference,
+        orderId: t.order?.orderId,
+      };
+    });
 
     return handleResponse(res, 200, "Transactions fetched", {
       items,

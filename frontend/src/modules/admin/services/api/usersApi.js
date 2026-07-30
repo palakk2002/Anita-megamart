@@ -11,6 +11,11 @@ export const adminUsersApi = {
     getUsers: (params) => axiosInstance.get('/admin/users', { params }),
     getUserById: (id) => axiosInstance.get(`/admin/users/${id}`),
 
+    getUserWallet: (id) => axiosInstance.get(`/admin/users/${id}/wallet`),
+    getUserWalletHistory: (id, params) => axiosInstance.get(`/admin/users/${id}/wallet/history`, { params }),
+    addWalletCoins: (data) => axiosInstance.post('/admin/wallet/add-coins', data),
+    removeWalletCoins: (data) => axiosInstance.post('/admin/wallet/remove-coins', data),
+
     getSellers: (params) => axiosInstance.get('/admin/sellers', { params }),
     getActiveSellers: (params) =>
         axiosInstance.get('/admin/sellers/active', { params }),

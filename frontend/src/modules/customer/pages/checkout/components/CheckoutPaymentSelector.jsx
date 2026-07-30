@@ -57,7 +57,7 @@ const CheckoutPaymentSelector = React.memo(function CheckoutPaymentSelector({
             <motion.div
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
-              className="pt-2 border-t border-slate-50 mt-2">
+              className="pt-2 border-t border-slate-50 mt-2 space-y-1.5">
               <div className="flex justify-between items-center bg-brand-50/50 p-2 rounded-xl">
                 <span className="text-[11px] font-bold text-slate-600 uppercase">
                   Amount to be used
@@ -66,6 +66,9 @@ const CheckoutPaymentSelector = React.memo(function CheckoutPaymentSelector({
                   ₹{walletAmountToUse}
                 </span>
               </div>
+              <p className="text-[10px] text-emerald-700 font-semibold bg-emerald-50 px-2 py-1 rounded-lg">
+                💡 Max 25% of total wallet balance (₹{Math.floor((walletBalance || 0) * 0.25)}) usable per purchase. Remaining ₹{Math.max(0, (walletBalance || 0) - walletAmountToUse)} saved for next orders!
+              </p>
             </motion.div>
           )}
         </motion.div>

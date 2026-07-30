@@ -134,4 +134,4 @@ notificationSchema.index({ userId: 1, role: 1, createdAt: -1, _id: -1 });
 notificationSchema.index({ userId: 1, role: 1, isRead: 1, createdAt: -1 });
 notificationSchema.index({ role: 1, status: 1, createdAt: -1 });
 
-export default mongoose.models.Notification || mongoose.model("Notification", notificationSchema);
+export default (mongoose.models && mongoose.models.Notification) || mongoose.model("Notification", notificationSchema);

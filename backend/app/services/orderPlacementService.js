@@ -10,6 +10,7 @@ import {
   LEDGER_TRANSACTION_TYPE,
   ORDER_PAYMENT_STATUS,
   OWNER_TYPE,
+  MAX_WALLET_USAGE_PERCENTAGE,
   isWalletRedemptionReducesPayableEnabled,
   isServerSideCouponEngineEnabled,
 } from "../constants/finance.js";
@@ -381,6 +382,12 @@ export async function placeOrderAtomic({
       if (canonicalBalance < walletAmount) {
         throw new Error("Insufficient wallet balance");
       }
+      const maxAllowedWallet = Math.floor(canonicalBalance * MAX_WALLET_USAGE_PERCENTAGE);
+      if (walletAmount > maxAllowedWallet) {
+        throw new Error(
+          `Wallet redemption cannot exceed ${MAX_WALLET_USAGE_PERCENTAGE * 100}% of your wallet balance (Max allowed: ₹${maxAllowedWallet})`
+        );
+      }
     }
 
     const {
@@ -417,6 +424,8 @@ export async function placeOrderAtomic({
       customerId,
       session,
     });
+
+
 
     const checkoutGroupId = await generateUniqueCheckoutGroupId({ session });
     const checkoutReservation = computeStockReservationWindow(paymentMode);
