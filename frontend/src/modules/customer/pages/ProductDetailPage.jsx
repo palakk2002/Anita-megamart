@@ -253,10 +253,11 @@ const ProductDetailPage = () => {
                         </p>
                     </div>
 
+                        <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl text-xs font-bold w-fit mb-6">
+                            <span className="flex items-center gap-1.5">
                                 <Clock size={14} /> Delivered in 10-15 mins
                             </span>
                         </div>
-                    </div>
 
                     <div className="grid grid-cols-3 gap-4">
                         <div className="bg-white p-4 rounded-2xl border border-slate-100 text-center shadow-sm">
