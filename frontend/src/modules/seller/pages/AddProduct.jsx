@@ -166,6 +166,8 @@ const AddProduct = () => {
       if (formData.mainImageFile) {
         const compressedMain = await compressImage(formData.mainImageFile);
         data.append("mainImage", compressedMain);
+      } else if (formData.mainImage && typeof formData.mainImage === "string") {
+        data.append("mainImage", formData.mainImage);
       }
 
       if (formData.galleryFiles && formData.galleryFiles.length > 0) {
@@ -173,6 +175,10 @@ const AddProduct = () => {
         const compressedGalleryFiles = await Promise.all(compressedGalleryPromises);
         compressedGalleryFiles.forEach(file => {
           data.append("galleryImages", file);
+        });
+      } else if (formData.galleryImages && formData.galleryImages.length > 0) {
+        formData.galleryImages.forEach(img => {
+          if (typeof img === "string") data.append("galleryImages", img);
         });
       }
 

@@ -253,40 +253,6 @@ const ProductDetailPage = () => {
                         </p>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row items-center gap-6 p-6 bg-slate-50 rounded-[2.5rem] border border-slate-100">
-                        {quantity > 0 ? (
-                            <div className="flex items-center bg-primary text-primary-foreground rounded-2xl h-16 w-full sm:w-auto px-2 shadow-xl shadow-brand-100">
-                                <button
-                                    onClick={() => updateQuantity(product.id, -1, "")}
-                                    className="w-12 h-12 flex items-center justify-center hover:bg-white/20 rounded-xl transition-all"
-                                >
-                                    <Minus size={24} strokeWidth={3} />
-                                </button>
-                                <span className="w-16 text-center font-black text-xl">{quantity}</span>
-                                <button
-                                    onClick={() => updateQuantity(product.id, 1, "")}
-                                    className="w-12 h-12 flex items-center justify-center hover:bg-white/20 rounded-xl transition-all"
-                                >
-                                    <Plus size={24} strokeWidth={3} />
-                                </button>
-                            </div>
-                        ) : (
-                            <Button
-                                onClick={() => {
-                                    addToCart(product);
-                                    showToast(`${product.name} added to cart`, 'success');
-                                }}
-                                className="h-16 w-full sm:w-64 bg-primary hover:bg-[var(--brand-400)] text-white text-lg font-black rounded-2xl shadow-xl transition-all hover:-translate-y-1"
-                            >
-                                <Plus className="mr-2" size={24} strokeWidth={3} /> ADD TO CART
-                            </Button>
-                        )}
-
-                        <div className="flex flex-col gap-1 text-center sm:text-left">
-                            <span className="text-xs font-black text-primary uppercase tracking-widest flex items-center justify-center sm:justify-start gap-1">
-                                <ShieldCheck size={14} /> Quality Guaranteed
-                            </span>
-                            <span className="text-sm font-bold text-slate-400 flex items-center justify-center sm:justify-start gap-1">
                                 <Clock size={14} /> Delivered in 10-15 mins
                             </span>
                         </div>

@@ -10,11 +10,28 @@ async function check() {
   try {
     await mongoose.connect(process.env.MONGO_URI);
     console.log("Connected to MongoDB.");
-    const products = await Product.find({}).sort({ createdAt: -1 }).limit(10).lean();
-    console.log(`Found ${products.length} products:`);
-    for (const p of products) {
-      console.log(`- ID: ${p._id}, Name: ${p.name}, mainImage: "${p.mainImage}", approvalStatus: ${p.approvalStatus}, status: ${p.status}`);
+    const missing = await Product.find({
+      $or: [
+        { mainImage: { $exists: false } },
+        { mainImage: null },
+        { mainImage: "" }
+      ]
+    }).lean();
+
+    console.log(`Found ${missing.length} products missing mainImage:`);
+    const withOtherImg = missing.filter(
+      (p) => p.image || (p.galleryImages && p.galleryImages.length > 0) || p.thumbnail
+    );
+    console.log(`Products having image in other fields: ${withOtherImg.length}`);
+    if (withOtherImg.length > 0) {
+      console.log("Sample with other fields:", withOtherImg.slice(0, 5).map(p => ({ id: p._id, name: p.name, image: p.image, gallery: p.galleryImages })));
     }
+
+    console.log("\nSample missing products:");
+    missing.slice(0, 10).forEach((p, i) => {
+      console.log(`${i + 1}. [${p._id}] "${p.name}" (image: ${p.image}, gallery: ${JSON.stringify(p.galleryImages)})`);
+    });
+
     process.exit(0);
   } catch (error) {
     console.error("Error:", error);

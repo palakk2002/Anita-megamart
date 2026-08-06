@@ -13,6 +13,7 @@ import { sellerApi } from '@/modules/seller/services/sellerApi';
 import { adminApi } from '@/modules/admin/services/adminApi';
 import { AnimatePresence } from 'framer-motion';
 import NotificationPopup from './NotificationPopup';
+import SellerStatusToggle from '../components/SellerStatusToggle';
 import { toast } from 'sonner';
 
 import { useSettings } from '@core/context/SettingsContext';
@@ -251,7 +252,8 @@ const Topbar = ({ onMenuClick }) => {
                 </form>
             </div>
 
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3 md:space-x-4">
+                {isSeller && <SellerStatusToggle />}
                 <div className="relative" ref={notificationRef}>
                     <button
                         onClick={() => setShowNotifications(!showNotifications)}

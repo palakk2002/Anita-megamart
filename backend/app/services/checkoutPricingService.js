@@ -1,6 +1,7 @@
 import Seller from "../models/seller.js";
 import Category from "../models/category.js";
 import { distanceMeters } from "../utils/geoUtils.js";
+import { getSellerCurrentOpenStatus } from "./storeStatusService.js";
 import {
   HANDLING_FEE_STRATEGY,
   isWalletRedemptionReducesPayableEnabled,
@@ -40,10 +41,9 @@ export function groupHydratedItemsBySeller(hydratedItems = []) {
 }
 
 async function computeDistanceKmForSeller({ sellerId, addressLocation, session = null }) {
-  const normalizedLocation = normalizeLocation(addressLocation);
-  if (!normalizedLocation) return 0;
-
-  const query = Seller.findById(sellerId).select("location serviceRadius shopName").lean();
+  const query = Seller.findById(sellerId)
+    .select("location serviceRadius shopName isOnline isManualOverride storeHours isActive applicationStatus")
+    .lean();
   if (session) query.session(session);
   const seller = await query;
   if (!seller) {
@@ -51,6 +51,18 @@ async function computeDistanceKmForSeller({ sellerId, addressLocation, session =
     err.statusCode = 404;
     throw err;
   }
+
+  if (!getSellerCurrentOpenStatus(seller)) {
+    const err = new Error(
+      `${seller.shopName || "Store"} is currently closed and not accepting new orders.`,
+    );
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const normalizedLocation = normalizeLocation(addressLocation);
+  if (!normalizedLocation) return 0;
+
   const coords = seller?.location?.coordinates;
   if (!Array.isArray(coords) || coords.length < 2) return 0;
 
@@ -62,10 +74,12 @@ async function computeDistanceKmForSeller({ sellerId, addressLocation, session =
     Number(sellerLng),
   );
   const distanceKm = Number((distanceInMeters / 1000).toFixed(3));
-  
+
   const radius = Number(seller.serviceRadius || 5);
   if (distanceKm > radius) {
-    const err = new Error(`${seller.shopName || "Store"} does not deliver to your current location (Distance: ${distanceKm}km, Service Radius: ${radius}km)`);
+    const err = new Error(
+      `${seller.shopName || "Store"} does not deliver to your current location (Distance: ${distanceKm}km, Service Radius: ${radius}km)`,
+    );
     err.statusCode = 400;
     throw err;
   }

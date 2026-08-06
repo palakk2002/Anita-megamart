@@ -1,5 +1,6 @@
 import Seller from "../../models/seller.js";
 import Order from "../../models/order.js";
+import { getSellerCurrentOpenStatus } from "../storeStatusService.js";
 import Product from "../../models/product.js";
 import {
   computeMapBounds,
@@ -59,7 +60,7 @@ export async function getSellerLocationsData({
   const baseQuery = filters.length ? { $and: filters } : {};
   const sellers = await Seller.find(baseQuery)
     .select(
-      "_id name shopName email phone category address location serviceRadius isActive isVerified applicationStatus reviewedAt createdAt rejectionReason",
+      "_id name shopName email phone category address location serviceRadius isActive isVerified isOnline isManualOverride storeHours applicationStatus reviewedAt createdAt rejectionReason",
     )
     .lean();
 
@@ -76,11 +77,13 @@ export async function getSellerLocationsData({
     const locationValid = hasValidSellerLocation(seller);
     const radiusKm = normalizeRadiusKm(seller.serviceRadius, 5);
     const cityLabel = extractSellerCity(seller);
+    const isStoreOpen = getSellerCurrentOpenStatus(seller);
 
     return {
       ...seller,
       id: String(seller._id),
       city: cityLabel,
+      isStoreOpen,
       lifecycle: resolveSellerLifecycleStatus(seller),
       hasValidLocation: locationValid,
       lat: locationValid ? lat : null,

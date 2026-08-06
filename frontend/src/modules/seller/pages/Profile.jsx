@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import Card from "@shared/components/ui/Card";
 import Button from "@shared/components/ui/Button";
 import MapPicker from "../../../shared/components/MapPicker";
+import StoreHoursManager from "../components/StoreHoursManager";
 
 const SellerProfile = () => {
   const [profile, setProfile] = useState(null);
@@ -500,6 +501,11 @@ const SellerProfile = () => {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Store Operating Hours & Schedule Manager */}
+        <div className="mt-8">
+          <StoreHoursManager />
         </div>
       </div>
 

@@ -72,6 +72,7 @@ const ProductCard = React.memo(
     );
     const quantity = cartItem ? cartItem.quantity : 0;
     const isWishlisted = isInWishlist(product.id || product._id);
+    const isStoreClosed = product.isStoreOpen === false || product.sellerId?.isStoreOpen === false;
 
     const handleProductClick = React.useCallback(
       (e) => {
@@ -313,7 +314,23 @@ const ProductCard = React.memo(
 
             {/* ADD Button / Quantity Selector (Always in price row) */}
             <div className="flex">
-              {quantity > 0 ? (
+              {isStoreClosed ? (
+                <button
+                  disabled
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    showToast("Shop is currently closed and not accepting orders");
+                  }}
+                  className={cn(
+                    "bg-slate-100 border-[1.5px] border-slate-300 text-slate-400 rounded-lg font-black tracking-wide leading-none cursor-not-allowed uppercase",
+                    compact
+                      ? "px-2 py-1 text-[9px]"
+                      : "px-3 py-1.5 text-[10px] sm:px-4 sm:py-2 sm:text-[11px]",
+                  )}>
+                  Closed
+                </button>
+              ) : quantity > 0 ? (
                 <div
                   className={cn(
                     "flex items-center bg-white border-[1.5px] border-primary rounded-lg p-0.5 justify-between",

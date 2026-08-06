@@ -3,6 +3,7 @@ import Transaction from "../models/transaction.js";
 import { handleResponse, calculateDistance } from "../utils/helper.js";
 import mongoose from "mongoose";
 import { invalidateSellerName } from "../services/entityNameCache.js";
+import { getSellerCurrentOpenStatus } from "../services/storeStatusService.js";
 
 /* ===============================
    GET NEARBY SELLERS
@@ -19,8 +20,6 @@ export const getNearbySellers = async (req, res) => {
     const customerLng = Number(lng);
 
     // Fetch all active/verified sellers
-    // We could use $geoNear, but to strictly follow the requirement of individual radii,
-    // we'll fetch sellers within a reasonable max distance (e.g. 100km) and then filter.
     const sellers = await Seller.find({
       isActive: true,
       isVerified: true,
@@ -30,27 +29,30 @@ export const getNearbySellers = async (req, res) => {
             type: "Point",
             coordinates: [customerLng, customerLat],
           },
-          $maxDistance: 100000, // 100km max search area for performance
+          $maxDistance: 100000, // 100km max search area
         },
       },
     }).lean();
 
-    // Filter based on individual service radius
-    const nearbySellers = sellers.filter((seller) => {
-      const sellerLng = seller.location.coordinates[0];
-      const sellerLat = seller.location.coordinates[1];
-      const distance = calculateDistance(
-        customerLat,
-        customerLng,
-        sellerLat,
-        sellerLng,
-      );
+    // Filter based on individual service radius and compute store open status
+    const nearbySellers = sellers
+      .map((seller) => {
+        const sellerLng = seller.location.coordinates[0];
+        const sellerLat = seller.location.coordinates[1];
+        const distance = calculateDistance(
+          customerLat,
+          customerLng,
+          sellerLat,
+          sellerLng,
+        );
 
-      // Add distance to seller object for frontend
-      seller.distance = distance;
-
-      return distance <= (seller.serviceRadius || 5);
-    });
+        return {
+          ...seller,
+          distance,
+          isStoreOpen: getSellerCurrentOpenStatus(seller),
+        };
+      })
+      .filter((seller) => seller.distance <= (seller.serviceRadius || 5));
 
     return handleResponse(
       res,
@@ -76,7 +78,6 @@ export const requestWithdrawal = async (req, res) => {
     }
 
     // 1. Calculate current available balance
-    // Consistent with getSellerEarnings logic in sellerStatsController.js
     const transactions = await Transaction.find({
       user: sellerId,
       userModel: "Seller",
@@ -107,7 +108,6 @@ export const requestWithdrawal = async (req, res) => {
     }
 
     // 2. Create Withdrawal Transaction
-    // Withdrawals have negative amounts per the model comment
     const withdrawal = await Transaction.create({
       user: sellerId,
       userModel: "Seller",
@@ -137,11 +137,14 @@ export const getSellerProfile = async (req, res) => {
     if (!seller) {
       return handleResponse(res, 404, "Seller not found");
     }
+    const sellerObj = seller.toObject();
+    sellerObj.isStoreOpen = getSellerCurrentOpenStatus(seller);
+
     return handleResponse(
       res,
       200,
       "Seller profile fetched successfully",
-      seller,
+      sellerObj,
     );
   } catch (error) {
     return handleResponse(res, 500, error.message);
@@ -155,13 +158,11 @@ export const updateSellerProfile = async (req, res) => {
   try {
     const { name, shopName, phone, address, locality, pincode, city, state, lat, lng, radius, profileImage } = req.body;
 
-    // Find seller
     const seller = await Seller.findById(req.user.id);
     if (!seller) {
       return handleResponse(res, 404, "Seller not found");
     }
 
-    // Update fields if provided
     if (name) seller.name = name;
     if (shopName) seller.shopName = shopName;
     if (phone) seller.phone = phone;
@@ -172,7 +173,6 @@ export const updateSellerProfile = async (req, res) => {
     if (city !== undefined) seller.city = city;
     if (state !== undefined) seller.state = state;
 
-    // Validate and update geo data
     if (lat !== undefined && lng !== undefined) {
       if (lat < -90 || lat > 90)
         return handleResponse(res, 400, "Invalid latitude");
@@ -193,22 +193,98 @@ export const updateSellerProfile = async (req, res) => {
 
     const updatedSeller = await seller.save();
 
-    // Invalidate cached seller name in case shopName changed
     invalidateSellerName(req.user.id).catch((err) => {
       console.warn("[Seller] Name cache invalidation failed:", err.message);
     });
+
+    const sellerObj = updatedSeller.toObject();
+    sellerObj.isStoreOpen = getSellerCurrentOpenStatus(updatedSeller);
 
     return handleResponse(
       res,
       200,
       "Profile updated successfully",
-      updatedSeller,
+      sellerObj,
     );
   } catch (error) {
-    // Handle duplicate phone error
     if (error.code === 11000) {
       return handleResponse(res, 400, "Phone number already in use");
     }
     return handleResponse(res, 500, error.message);
   }
 };
+
+/* ===============================
+   TOGGLE SELLER ONLINE STATUS
+================================ */
+export const toggleStoreStatus = async (req, res) => {
+  try {
+    const seller = await Seller.findById(req.user.id);
+    if (!seller) {
+      return handleResponse(res, 404, "Seller not found");
+    }
+
+    const { isOnline } = req.body;
+    seller.isOnline = isOnline !== undefined ? Boolean(isOnline) : !seller.isOnline;
+    seller.isManualOverride = true;
+
+    await seller.save();
+    const isStoreOpen = getSellerCurrentOpenStatus(seller);
+
+    return handleResponse(
+      res,
+      200,
+      `Store status updated to ${seller.isOnline ? "Online" : "Offline"}`,
+      {
+        isOnline: seller.isOnline,
+        isManualOverride: seller.isManualOverride,
+        isStoreOpen,
+      },
+    );
+  } catch (error) {
+    return handleResponse(res, 500, error.message);
+  }
+};
+
+/* ===============================
+   UPDATE STORE OPERATING HOURS
+================================ */
+export const updateStoreHours = async (req, res) => {
+  try {
+    const seller = await Seller.findById(req.user.id);
+    if (!seller) {
+      return handleResponse(res, 404, "Seller not found");
+    }
+
+    const { enabled, schedule, resetManualOverride } = req.body;
+
+    if (enabled !== undefined) {
+      seller.storeHours.enabled = Boolean(enabled);
+    }
+
+    if (Array.isArray(schedule)) {
+      seller.storeHours.schedule = schedule;
+    }
+
+    if (resetManualOverride) {
+      seller.isManualOverride = false;
+    }
+
+    await seller.save();
+    const isStoreOpen = getSellerCurrentOpenStatus(seller);
+
+    return handleResponse(
+      res,
+      200,
+      "Store operating hours updated successfully",
+      {
+        storeHours: seller.storeHours,
+        isManualOverride: seller.isManualOverride,
+        isStoreOpen,
+      },
+    );
+  } catch (error) {
+    return handleResponse(res, 500, error.message);
+  }
+};
+

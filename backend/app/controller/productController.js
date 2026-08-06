@@ -1,4 +1,6 @@
 import Product from "../models/product.js";
+import Seller from "../models/seller.js";
+import { getSellerCurrentOpenStatus } from "../services/storeStatusService.js";
 import { handleResponse } from "../utils/helper.js";
 import { slugify } from "../utils/slugify.js";
 import getPagination from "../utils/pagination.js";
@@ -89,8 +91,10 @@ function parseJsonIfString(value) {
 
 function normalizeUrl(value) {
   const normalized = String(value || "").trim();
-  if (!/^https?:\/\//i.test(normalized)) return "";
-  return normalized;
+  if (/^https?:\/\//i.test(normalized) || /^data:image\//i.test(normalized)) {
+    return normalized;
+  }
+  return "";
 }
 
 function parseImageList(input) {
@@ -108,7 +112,7 @@ function parseImageList(input) {
   return single ? [single] : [];
 }
 
-function applyMediaFields(productData) {
+function applyMediaFields(productData, existingProduct = null) {
   const explicitMainImage = normalizeUrl(productData.mainImage || productData.mainImageUrl);
   const galleryImages = parseImageList(productData.galleryImages);
   const genericImages = parseImageList(productData.images);
@@ -119,14 +123,33 @@ function applyMediaFields(productData) {
   } else if (mergedGallery.length > 0) {
     productData.mainImage = mergedGallery[0];
     mergedGallery.shift();
-  } else {
-    delete productData.mainImage;
+  } else if (existingProduct && existingProduct.mainImage) {
+    productData.mainImage = existingProduct.mainImage;
   }
 
   if (mergedGallery.length > 0) {
     productData.galleryImages = mergedGallery;
-  } else {
-    delete productData.galleryImages;
+  } else if (existingProduct && existingProduct.galleryImages && existingProduct.galleryImages.length > 0) {
+    productData.galleryImages = existingProduct.galleryImages;
+  }
+}
+
+async function handleBase64Images(productData) {
+  if (productData.mainImage && String(productData.mainImage).startsWith("data:image/")) {
+    try {
+      const parts = productData.mainImage.split(",");
+      if (parts.length > 1) {
+        const mimeMatch = parts[0].match(/data:(image\/[a-zA-Z0-9.+]+);base64/);
+        const mimeType = mimeMatch ? mimeMatch[1] : "image/jpeg";
+        const buffer = Buffer.from(parts[1], "base64");
+        const uploadedUrl = await uploadToCloudinary(buffer, "products", { mimeType, resourceType: "image" });
+        if (uploadedUrl) {
+          productData.mainImage = uploadedUrl;
+        }
+      }
+    } catch (err) {
+      logger.error("Failed to upload base64 mainImage to Cloudinary", { error: err });
+    }
   }
 }
 
@@ -385,22 +408,47 @@ export const getProducts = async (req, res) => {
 
       const nameMap = Object.fromEntries([...categoryEntries, ...sellerEntries]);
 
+      // Fetch full seller docs for open status check
+      const sellerDocs = sellerIdSet.size > 0
+        ? await Seller.find({ _id: { $in: [...sellerIdSet] } })
+            .select("_id shopName isOnline isManualOverride storeHours isActive applicationStatus")
+            .lean()
+        : [];
+      
+      const sellerMap = {};
+      for (const s of sellerDocs) {
+        sellerMap[String(s._id)] = {
+          _id: s._id,
+          shopName: s.shopName,
+          isStoreOpen: getSellerCurrentOpenStatus(s),
+        };
+      }
+
       // Enrich products to match the shape previously returned by .populate()
-      const products = rawProducts.map((p) => ({
-        ...p,
-        headerId: p.headerId
-          ? { _id: p.headerId, name: nameMap[String(p.headerId)] ?? null }
-          : null,
-        categoryId: p.categoryId
-          ? { _id: p.categoryId, name: nameMap[String(p.categoryId)] ?? null }
-          : null,
-        subcategoryId: p.subcategoryId
-          ? { _id: p.subcategoryId, name: nameMap[String(p.subcategoryId)] ?? null }
-          : null,
-        sellerId: p.sellerId
-          ? { _id: p.sellerId, shopName: nameMap[String(p.sellerId)] ?? null }
-          : null,
-      }));
+      const products = rawProducts.map((p) => {
+        const sInfo = p.sellerId ? sellerMap[String(p.sellerId)] : null;
+        const isStoreOpen = sInfo ? sInfo.isStoreOpen : true;
+        return {
+          ...p,
+          headerId: p.headerId
+            ? { _id: p.headerId, name: nameMap[String(p.headerId)] ?? null }
+            : null,
+          categoryId: p.categoryId
+            ? { _id: p.categoryId, name: nameMap[String(p.categoryId)] ?? null }
+            : null,
+          subcategoryId: p.subcategoryId
+            ? { _id: p.subcategoryId, name: nameMap[String(p.subcategoryId)] ?? null }
+            : null,
+          sellerId: p.sellerId
+            ? {
+                _id: p.sellerId,
+                shopName: sInfo?.shopName || (nameMap[String(p.sellerId)] ?? null),
+                isStoreOpen,
+              }
+            : null,
+          isStoreOpen,
+        };
+      });
 
       return {
         items: normalizeProductListModeration(products),
@@ -714,6 +762,7 @@ export const createProduct = async (req, res) => {
     }
 
     applyMediaFields(productData);
+    await handleBase64Images(productData);
 
     // Handle tags if string
     if (typeof productData.tags === "string") {
@@ -888,7 +937,8 @@ export const updateProduct = async (req, res) => {
       productData.sku = await generateUniqueSku(productData.sku, 1, id);
     }
 
-    applyMediaFields(productData);
+    applyMediaFields(productData, product);
+    await handleBase64Images(productData);
 
     if (typeof productData.tags === "string") {
       productData.tags = productData.tags.split(",").map((tag) => tag.trim());
@@ -1051,13 +1101,20 @@ export const getProductById = async (req, res) => {
           .populate("headerId", "name")
           .populate("categoryId", "name")
           .populate("subcategoryId", "name")
-          .populate("sellerId", "shopName")
+          .populate("sellerId", "shopName isOnline isManualOverride storeHours isActive applicationStatus")
           .lean(),
       getTTL("product"),
     );
 
     if (!product) {
       return handleResponse(res, 404, "Product not found");
+    }
+
+    if (product?.sellerId && typeof product.sellerId === "object") {
+      product.sellerId.isStoreOpen = getSellerCurrentOpenStatus(product.sellerId);
+      product.isStoreOpen = product.sellerId.isStoreOpen;
+    } else {
+      product.isStoreOpen = true;
     }
 
     if (enforceRadius) {

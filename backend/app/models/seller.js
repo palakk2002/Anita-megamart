@@ -124,6 +124,49 @@ const sellerSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    isOnline: {
+      type: Boolean,
+      default: true,
+    },
+    isManualOverride: {
+      type: Boolean,
+      default: false,
+    },
+    storeHours: {
+      enabled: {
+        type: Boolean,
+        default: false,
+      },
+      schedule: [
+        {
+          day: {
+            type: String,
+            enum: [
+              "Monday",
+              "Tuesday",
+              "Wednesday",
+              "Thursday",
+              "Friday",
+              "Saturday",
+              "Sunday",
+            ],
+            required: true,
+          },
+          openTime: {
+            type: String,
+            default: "09:00", // 24-hr format HH:mm
+          },
+          closeTime: {
+            type: String,
+            default: "21:00", // 24-hr format HH:mm
+          },
+          isOpen: {
+            type: Boolean,
+            default: true,
+          },
+        },
+      ],
+    },
     location: {
       type: {
         type: String,

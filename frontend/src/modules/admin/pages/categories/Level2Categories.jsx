@@ -12,6 +12,10 @@ import {
   Upload,
   Image,
   Filter,
+  PlusCircle,
+  ChevronDown,
+  ChevronRight,
+  CornerDownRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -42,6 +46,22 @@ const Level2Categories = () => {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
+
+  const [subCategories, setSubCategories] = useState([]);
+  const [expandedCategoryIds, setExpandedCategoryIds] = useState([]);
+
+  // State for Add Subcategory Modal directly from Level 2 Category row
+  const [isAddSubModalOpen, setIsAddSubModalOpen] = useState(false);
+  const [selectedParentCategory, setSelectedParentCategory] = useState(null);
+  const [subFormData, setSubFormData] = useState({
+    name: "",
+    slug: "",
+    description: "",
+    status: "active",
+  });
+  const [subImageFile, setSubImageFile] = useState(null);
+  const [subPreviewUrl, setSubPreviewUrl] = useState(null);
+  const subFileInputRef = useRef(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -76,12 +96,19 @@ const Level2Categories = () => {
               : [];
         setCategories(allCats.filter((c) => c.type === "category"));
         setHeaderCategories(allCats.filter((c) => c.type === "header"));
+        setSubCategories(allCats.filter((c) => c.type === "subcategory"));
       }
     } catch (error) {
       toast.error("Failed to fetch categories");
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const toggleRowExpand = (id) => {
+    setExpandedCategoryIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
   };
 
   const filteredCategories = useMemo(() => {
@@ -227,6 +254,56 @@ const Level2Categories = () => {
     });
     setPreviewUrl(item.image || null);
     setIsAddModalOpen(true);
+  };
+
+  const openAddSubModal = (category) => {
+    setSelectedParentCategory(category);
+    setSubFormData({
+      name: "",
+      slug: "",
+      description: "",
+      status: "active",
+    });
+    setSubImageFile(null);
+    setSubPreviewUrl(null);
+    setIsAddSubModalOpen(true);
+  };
+
+  const handleSaveSubcategory = async () => {
+    if (!subFormData.name || !subFormData.slug || !selectedParentCategory) {
+      toast.error("Subcategory name is required");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const data = new FormData();
+      data.append("type", "subcategory");
+      data.append("name", subFormData.name);
+      data.append("slug", subFormData.slug);
+      if (subFormData.description) data.append("description", subFormData.description);
+      data.append("status", subFormData.status);
+      data.append("parentId", selectedParentCategory._id || selectedParentCategory.id);
+
+      if (subImageFile) {
+        const compressedFile = await compressImage(subImageFile);
+        data.append("image", compressedFile);
+      } else if (subPreviewUrl && !subPreviewUrl.startsWith("blob:")) {
+        data.append("image", subPreviewUrl);
+      }
+
+      await adminApi.createCategory(data);
+      toast.success(`Subcategory created under "${selectedParentCategory.name}"`);
+      setIsAddSubModalOpen(false);
+      setSelectedParentCategory(null);
+    } catch (error) {
+      console.error(error);
+      const errorMsg =
+        error.response?.data?.message || "Failed to create subcategory";
+      toast.error(errorMsg);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Helper to find parent name
@@ -394,67 +471,160 @@ const Level2Categories = () => {
                   </td>
                 </tr>
               ) : (
-                paginatedCategories.map((cat) => (
-                  <tr
-                    key={cat._id || cat.id}
-                    className="hover:bg-gray-50/50 transition-colors">
-                    <td className="py-3 px-4">
-                      <input
-                        type="checkbox"
-                        className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                        checked={selectedItems.includes(cat._id || cat.id)}
-                        onChange={() => handleSelect(cat._id || cat.id)}
-                      />
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="w-10 h-10 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center border border-gray-200">
-                        {cat.image ? (
-                          <img
-                            src={typeof cat.image === 'string' ? cat.image : (cat.image.url || cat.image.secure_url || cat.image)}
-                            alt={cat.name}
-                            className="w-full h-full object-cover"
+                paginatedCategories.map((cat) => {
+                  const catId = cat._id || cat.id;
+                  const isExpanded = expandedCategoryIds.includes(catId);
+                  const childSubCats = subCategories.filter((sub) => {
+                    const pId = sub.parentId?._id || sub.parentId;
+                    return pId === catId;
+                  });
+
+                  return (
+                    <React.Fragment key={catId}>
+                      <tr
+                        className="hover:bg-gray-50/50 transition-colors cursor-pointer"
+                        onClick={() => toggleRowExpand(catId)}>
+                        <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                            checked={selectedItems.includes(catId)}
+                            onChange={() => handleSelect(catId)}
                           />
-                        ) : (
-                          <Image className="w-5 h-5 text-gray-400" />
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 font-medium text-gray-900">
-                      {cat.name}
-                    </td>
-                    <td className="py-3 px-4 text-gray-500">
-                      <Badge
-                        variant="neutral"
-                        className="bg-gray-100 text-gray-600">
-                        {getParentName(cat.parentId)}
-                      </Badge>
-                    </td>
-                    <td className="py-3 px-4 text-gray-500">{cat.slug}</td>
-                    <td className="py-3 px-4">
-                      <Badge
-                        variant={
-                          cat.status === "active" ? "success" : "warning"
-                        }>
-                        {cat.status}
-                      </Badge>
-                    </td>
-                    <td className="py-3 px-4 text-right space-x-2">
-                      <button
-                        onClick={() => openEditModal(cat)}
-                        className="p-1 text-gray-500 hover:text-brand-600 transition-colors">
-                        <Edit className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setDeleteTarget(cat);
-                          setIsDeleteModalOpen(true);
-                        }}
-                        className="p-1 text-gray-500 hover:text-red-600 transition-colors">
-                        <Trash className="w-5 h-5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="w-10 h-10 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center border border-gray-200">
+                            {cat.image ? (
+                              <img
+                                src={typeof cat.image === 'string' ? cat.image : (cat.image.url || cat.image.secure_url || cat.image)}
+                                alt={cat.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <Image className="w-5 h-5 text-gray-400" />
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 font-medium text-gray-900">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleRowExpand(catId);
+                              }}
+                              className={cn(
+                                "p-1 hover:bg-gray-200 rounded transition-colors text-gray-500",
+                                childSubCats.length === 0 && "opacity-40"
+                              )}
+                              title={childSubCats.length > 0 ? (isExpanded ? "Hide subcategories" : "Show subcategories") : "No subcategories"}>
+                              {isExpanded ? (
+                                <ChevronDown className="w-4 h-4 text-brand-600" />
+                              ) : (
+                                <ChevronRight className="w-4 h-4 text-gray-400" />
+                              )}
+                            </button>
+                            <span>{cat.name}</span>
+                            <span className="text-[11px] font-normal px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full border border-gray-200">
+                              {childSubCats.length} sub
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-gray-500">
+                          <Badge
+                            variant="neutral"
+                            className="bg-gray-100 text-gray-600">
+                            {getParentName(cat.parentId)}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4 text-gray-500">{cat.slug}</td>
+                        <td className="py-3 px-4">
+                          <Badge
+                            variant={
+                              cat.status === "active" ? "success" : "warning"
+                            }>
+                            {cat.status}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4 text-right space-x-2 flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => openAddSubModal(cat)}
+                            title={`Add subcategory under ${cat.name}`}
+                            className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 bg-black text-white hover:bg-gray-800 rounded-md font-medium transition-colors shadow-sm">
+                            <PlusCircle className="w-4 h-4" />
+                            <span>+ Subcategory</span>
+                          </button>
+                          <button
+                            onClick={() => openEditModal(cat)}
+                            title="Edit category"
+                            className="p-1 text-gray-500 hover:text-brand-600 transition-colors">
+                            <Edit className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setDeleteTarget(cat);
+                              setIsDeleteModalOpen(true);
+                            }}
+                            title="Delete category"
+                            className="p-1 text-gray-500 hover:text-red-600 transition-colors">
+                            <Trash className="w-5 h-5" />
+                          </button>
+                        </td>
+                      </tr>
+
+                      {/* Expandable Subcategories List */}
+                      {isExpanded && (
+                        <tr className="bg-slate-50/70">
+                          <td colSpan="7" className="p-0 border-b border-gray-200">
+                            <div className="py-3 px-6 ml-8 md:ml-12 border-l-2 border-brand-500 my-2 bg-white rounded-r-lg shadow-sm border border-gray-100">
+                              <div className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                <CornerDownRight className="w-4 h-4 text-brand-600" />
+                                <span>Subcategories under "{cat.name}" ({childSubCats.length}):</span>
+                              </div>
+                              {childSubCats.length === 0 ? (
+                                <p className="text-xs text-gray-400 italic py-2">
+                                  No subcategories found for this category yet. Click "+ Subcategory" to add one.
+                                </p>
+                              ) : (
+                                <div className="divide-y divide-gray-100">
+                                  {childSubCats.map((sub) => (
+                                    <div
+                                      key={sub._id || sub.id}
+                                      className="py-2 flex items-center justify-between hover:bg-gray-50 px-3 rounded-md transition-colors">
+                                      <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-md bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center">
+                                          {sub.image ? (
+                                            <img
+                                              src={typeof sub.image === 'string' ? sub.image : (sub.image.url || sub.image.secure_url || sub.image)}
+                                              alt={sub.name}
+                                              className="w-full h-full object-cover"
+                                            />
+                                          ) : (
+                                            <Image className="w-4 h-4 text-gray-400" />
+                                          )}
+                                        </div>
+                                        <div>
+                                          <span className="text-sm font-semibold text-gray-800">{sub.name}</span>
+                                          <span className="text-xs text-gray-400 ml-2 font-mono">({sub.slug})</span>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-3">
+                                        <Badge
+                                          variant={sub.status === "active" ? "success" : "warning"}
+                                          className="text-xs">
+                                          {sub.status}
+                                        </Badge>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -478,7 +648,7 @@ const Level2Categories = () => {
       {/* Add/Edit Modal */}
       <AnimatePresence>
         {isAddModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -616,7 +786,7 @@ const Level2Categories = () => {
       {/* Delete Confirmation Modal */}
       <AnimatePresence>
         {isDeleteModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -648,6 +818,154 @@ const Level2Categories = () => {
                     Delete
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Add Subcategory Modal */}
+      <AnimatePresence>
+        {isAddSubModalOpen && (
+          <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden">
+              <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">
+                    Add Subcategory (Level 3)
+                  </h2>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Parent Category:{" "}
+                    <span className="font-semibold text-brand-600 bg-brand-50 px-2 py-0.5 rounded border border-brand-200">
+                      {getParentName(selectedParentCategory?.parentId)} &gt; {selectedParentCategory?.name}
+                    </span>
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsAddSubModalOpen(false)}
+                  className="text-gray-400 hover:text-gray-600">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                {/* Image Upload */}
+                <div className="flex justify-center">
+                  <div
+                    onClick={() => subFileInputRef.current?.click()}
+                    className="w-24 h-24 rounded-full bg-gray-50 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-brand-500 overflow-hidden transition-colors">
+                    {subPreviewUrl ? (
+                      <img
+                        src={subPreviewUrl}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="text-center">
+                        <Image className="w-8 h-8 text-gray-400 mx-auto" />
+                        <span className="text-xs text-gray-500 mt-1">
+                          Upload Image
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    type="file"
+                    ref={subFileInputRef}
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        setSubImageFile(file);
+                        setSubPreviewUrl(URL.createObjectURL(file));
+                      }
+                    }}
+                    accept="image/*"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    Subcategory Name
+                  </label>
+                  <input
+                    type="text"
+                    value={subFormData.name}
+                    onChange={(e) =>
+                      setSubFormData({
+                        ...subFormData,
+                        name: e.target.value,
+                        slug: makeSlug(e.target.value),
+                      })
+                    }
+                    className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+                    placeholder="e.g., Whole Milk, Brown Bread"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    Slug
+                  </label>
+                  <input
+                    type="text"
+                    value={subFormData.slug}
+                    readOnly
+                    className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-gray-50 text-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+                    placeholder="e.g., whole-milk"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    Description (Optional)
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={subFormData.description}
+                    onChange={(e) =>
+                      setSubFormData({ ...subFormData, description: e.target.value })
+                    }
+                    className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 resize-none text-sm"
+                    placeholder="Brief description of this subcategory..."
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    Status
+                  </label>
+                  <select
+                    value={subFormData.status}
+                    onChange={(e) =>
+                      setSubFormData({ ...subFormData, status: e.target.value })
+                    }
+                    className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-gray-100 flex justify-end gap-3 bg-gray-50">
+                <button
+                  onClick={() => setIsAddSubModalOpen(false)}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium">
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveSubcategory}
+                  disabled={isSaving}
+                  className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 font-medium disabled:opacity-50 flex items-center gap-2">
+                  {isSaving && (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  )}
+                  Create Subcategory
+                </button>
               </div>
             </motion.div>
           </div>

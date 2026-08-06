@@ -25,6 +25,8 @@ export const sellerApi = {
     getWalletSummary: () => axiosInstance.get('/seller/wallet/summary'),
     getProfile: () => axiosInstance.get('/seller/profile'),
     updateProfile: (data) => axiosInstance.put('/seller/profile', data),
+    toggleStoreStatus: (data) => axiosInstance.patch('/seller/store-status', data),
+    updateStoreHours: (data) => axiosInstance.put('/seller/store-hours', data),
 
     // Stock
     adjustStock: (data) => axiosInstance.post('/products/adjust-stock', data),
