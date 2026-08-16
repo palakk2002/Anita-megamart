@@ -256,10 +256,13 @@ export const getProducts = async (req, res) => {
         if (isProductTextSearchEnabled() && term.length >= 3) {
           query.$text = { $search: term };
         } else {
-          // P3-5: substring search is preserved (so customer-facing UX
-          // doesn't shift) but the term is now regex-escaped to avoid
-          // injection and runtime errors on `(`, `*`, etc.
-          query.name = buildSearchRegex(term, { anchored: false });
+          const searchRegex = buildSearchRegex(term, { anchored: false });
+          query.$or = [
+            { name: searchRegex },
+            { tags: searchRegex },
+            { brand: searchRegex },
+            { description: searchRegex },
+          ];
         }
       }
     }
@@ -275,46 +278,25 @@ export const getProducts = async (req, res) => {
 
     const requestedSellerIds = parseSellerIdFilters({ sellerId, sellerIds });
     const coords = parseCustomerCoordinates({ lat, lng });
-    const shouldApplyLocationFilter = enforceRadius || coords.valid;
-    if (enforceRadius && !coords.valid) {
-      return handleResponse(
-        res,
-        400,
-        "lat and lng are required for customer product visibility",
-      );
-    }
-    if (shouldApplyLocationFilter) {
+    if (coords.valid) {
       const nearbySellerIds = await getNearbySellerIdsForCustomer(
         coords.lat,
         coords.lng,
       );
 
-      if (!nearbySellerIds.length) {
-        return handleResponse(res, 200, "No sellers found in your area", {
-          items: [],
-          page: 1,
-          limit: 24,
-          total: 0,
-          totalPages: 1,
-        });
+      if (nearbySellerIds.length > 0) {
+        const nearbySet = new Set(nearbySellerIds.map(String));
+        const finalSellerIds = requestedSellerIds.length
+          ? requestedSellerIds.filter((id) => nearbySet.has(String(id)))
+          : nearbySellerIds;
+
+        if (finalSellerIds.length > 0) {
+          query.sellerId = { $in: finalSellerIds };
+        }
+      } else if (requestedSellerIds.length > 0) {
+        // Fallback: If user explicitly requested a specific seller, honor it
+        query.sellerId = { $in: requestedSellerIds };
       }
-
-      const nearbySet = new Set(nearbySellerIds.map(String));
-      const finalSellerIds = requestedSellerIds.length
-        ? requestedSellerIds.filter((id) => nearbySet.has(String(id)))
-        : nearbySellerIds;
-
-      if (!finalSellerIds.length) {
-        return handleResponse(res, 200, "No products available in your area", {
-          items: [],
-          page: 1,
-          limit: 24,
-          total: 0,
-          totalPages: 1,
-        });
-      }
-
-      query.sellerId = { $in: finalSellerIds };
     }
 
     if (categoryIds && typeof categoryIds === "string") {
@@ -490,6 +472,9 @@ export const getSellerProducts = async (req, res) => {
       query.stock = { $gt: 0 };
     } else if (stockStatus === "out") {
       query.stock = 0;
+    } else if (stockStatus === "low") {
+      query.stock = { $gt: 0 };
+      query.$expr = { $lte: ["$stock", { $ifNull: ["$lowStockAlert", 5] }] };
     }
 
     if (approvalStatus && String(approvalStatus).trim().toLowerCase() !== "all") {
@@ -819,6 +804,8 @@ export const createProduct = async (req, res) => {
     try {
       await invalidate(buildKey("catalog", "productList", "*"));
       await invalidate("cache:offersections:public:*");
+      await invalidate("cache:search:*");
+      await invalidate("cache:sellers:nearby:*");
     } catch (cacheErr) {
       logger.error("Cache invalidation error", {
         scope: "createProduct",
@@ -995,6 +982,8 @@ export const updateProduct = async (req, res) => {
     try {
       await invalidate(buildKey("catalog", "productList", "*"));
       await invalidate("cache:offersections:public:*");
+      await invalidate("cache:search:*");
+      await invalidate("cache:sellers:nearby:*");
     } catch (cacheErr) {
       logger.error("Cache invalidation error", {
         scope: "updateProduct",
@@ -1052,6 +1041,8 @@ export const deleteProduct = async (req, res) => {
     try {
       await invalidate(buildKey("catalog", "productList", "*"));
       await invalidate("cache:offersections:public:*");
+      await invalidate("cache:search:*");
+      await invalidate("cache:sellers:nearby:*");
     } catch (cacheErr) {
       logger.error("Cache invalidation error", {
         scope: "deleteProduct",
@@ -1075,19 +1066,14 @@ export const getProductById = async (req, res) => {
 
     let nearbySellerSet = null;
     const coords = parseCustomerCoordinates(req.query || {});
-    if (enforceRadius) {
-      if (!coords.valid) {
-        return handleResponse(
-          res,
-          400,
-          "lat and lng are required for customer product visibility",
-        );
-      }
+    if (enforceRadius && coords.valid) {
       const nearbySellerIds = await getNearbySellerIdsForCustomer(
         coords.lat,
         coords.lng,
       );
-      nearbySellerSet = new Set(nearbySellerIds.map(String));
+      if (nearbySellerIds.length > 0) {
+        nearbySellerSet = new Set(nearbySellerIds.map(String));
+      }
     }
 
     const cacheKey = buildKey("catalog", "product", id);
@@ -1124,9 +1110,9 @@ export const getProductById = async (req, res) => {
       }
     }
 
-    if (enforceRadius) {
+    if (enforceRadius && nearbySellerSet && nearbySellerSet.size > 0) {
       const sellerIdForProduct = String(product?.sellerId?._id || product?.sellerId);
-      if (!nearbySellerSet || !nearbySellerSet.has(sellerIdForProduct)) {
+      if (!nearbySellerSet.has(sellerIdForProduct)) {
         return handleResponse(res, 404, "Product not available in your area");
       }
     }

@@ -105,25 +105,33 @@ const SearchPage = () => {
         }
     };
 
-    // Fetch products
+    // Fetch search results from backend API dynamically
     useEffect(() => {
-        const fetchProducts = async () => {
-            const hasValidLocation =
-                Number.isFinite(currentLocation?.latitude) &&
-                Number.isFinite(currentLocation?.longitude);
-            if (!hasValidLocation) {
-                setAllProducts([]);
-                setIsLoading(false);
-                return;
-            }
+        let isCancelled = false;
+        const fetchSearchResults = async () => {
+            const trimmedQuery = debouncedQuery.trim();
             setIsLoading(true);
             try {
-                const response = await customerApi.getProducts({
-                    limit: 100,
-                    lat: currentLocation.latitude,
-                    lng: currentLocation.longitude,
+                const params = {
+                    limit: 50,
+                };
+                if (trimmedQuery) {
+                    params.search = trimmedQuery;
+                }
+                if (
+                    Number.isFinite(currentLocation?.latitude) &&
+                    Number.isFinite(currentLocation?.longitude)
+                ) {
+                    params.lat = currentLocation.latitude;
+                    params.lng = currentLocation.longitude;
+                }
+
+                // Force refresh when user explicitly searches to bypass stale client cache
+                const response = await customerApi.getProducts(params, {
+                    forceRefresh: Boolean(trimmedQuery),
                 });
-                if (response.data.success) {
+
+                if (!isCancelled && response?.data?.success) {
                     const rawResult = response.data.result;
                     const dbProds = Array.isArray(response.data.results)
                         ? response.data.results
@@ -132,33 +140,48 @@ const SearchPage = () => {
                         : Array.isArray(rawResult)
                         ? rawResult
                         : [];
-                    const formattedProds = dbProds.map(p => ({
+                    const formattedProds = dbProds.map((p) => ({
                         ...p,
                         id: p._id,
                         image:
-                          p.mainImage ||
-                          p.image ||
-                          "https://images.unsplash.com/photo-1550989460-0adf9ea622e2?auto=format&fit=crop&q=80&w=400&h=400",
+                            p.mainImage ||
+                            p.image ||
+                            "https://images.unsplash.com/photo-1550989460-0adf9ea622e2?auto=format&fit=crop&q=80&w=400&h=400",
                         price: p.salePrice || p.price,
                         originalPrice: p.price,
-                        weight: p.weight || '',
-                        deliveryTime: '8-15 mins'
+                        weight: p.weight || "",
+                        deliveryTime: "8-15 mins",
                     }));
-                    setAllProducts(formattedProds);
+
+                    if (trimmedQuery) {
+                        setResults(formattedProds);
+                    } else {
+                        setAllProducts(formattedProds);
+                        setResults([]);
+                    }
                 }
             } catch (error) {
-                console.error('Error fetching products:', error);
+                console.error("Error fetching search results:", error);
+                if (!isCancelled && trimmedQuery) {
+                    setResults([]);
+                }
             } finally {
-                setIsLoading(false);
+                if (!isCancelled) setIsLoading(false);
             }
         };
-        fetchProducts();
-    }, [currentLocation?.latitude, currentLocation?.longitude]);
+
+        fetchSearchResults();
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [debouncedQuery, currentLocation?.latitude, currentLocation?.longitude]);
 
     // Save search term to history
     const saveSearch = (term) => {
-        if (!term.trim()) return;
-        const updated = [term, ...pastSearches.filter(s => s !== term)].slice(0, 10);
+        if (!term || !term.trim()) return;
+        const trimmed = term.trim();
+        const updated = [trimmed, ...pastSearches.filter((s) => s !== trimmed)].slice(0, 10);
         setPastSearches(updated);
         setJSON(STORAGE_KEYS.RECENT_SEARCHES, updated);
     };
@@ -166,7 +189,7 @@ const SearchPage = () => {
     // Remove specific search term
     const handleRemoveSearch = (e, term) => {
         e.stopPropagation();
-        const updated = pastSearches.filter(s => s !== term);
+        const updated = pastSearches.filter((s) => s !== term);
         setPastSearches(updated);
         setJSON(STORAGE_KEYS.RECENT_SEARCHES, updated);
     };
@@ -177,19 +200,6 @@ const SearchPage = () => {
             saveSearch(query);
         }
     };
-
-    // Real-time filtering logic
-    const filteredResults = useMemo(() => {
-        if (!debouncedQuery.trim()) return [];
-        return allProducts.filter(p =>
-            p.name.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
-            p.categoryId?.name?.toLowerCase().includes(debouncedQuery.toLowerCase())
-        );
-    }, [debouncedQuery, allProducts]);
-
-    useEffect(() => {
-        setResults(filteredResults);
-    }, [filteredResults]);
 
     // Dynamically load no-service Lottie when results are empty
     useEffect(() => {

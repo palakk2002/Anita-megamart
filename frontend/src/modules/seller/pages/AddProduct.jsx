@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { compressImage } from "@/core/utils/imageCompression";
 import { sellerApi } from "../services/sellerApi";
-import { invalidateCache } from "@core/api/dedupe";
+import { clearAllCache, invalidateCache } from "@core/api/dedupe";
 
 
 const AddProduct = () => {
@@ -187,7 +187,11 @@ const AddProduct = () => {
 
       const response = await sellerApi.createProduct(data);
       try {
+        clearAllCache();
         invalidateCache("/products");
+        invalidateCache("/categories");
+        invalidateCache("/offer-sections");
+        invalidateCache("/experience");
         sessionStorage.setItem("clear_home_cache", "true");
       } catch (err) {
         console.error("Cache invalidation failed:", err);

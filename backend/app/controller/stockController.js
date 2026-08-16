@@ -21,34 +21,50 @@ export const adjustStock = async (req, res) => {
             return handleResponse(res, 404, "Product not found or unauthorized");
         }
 
-        const qtyChange = Number(quantity);
+        const inputQty = Number(quantity);
         const previousStock = Number(product.stock || 0);
-        const finalStock = type === 'Restock' ? product.stock + qtyChange : product.stock - qtyChange;
+
+        let finalStock;
+        let diffQty;
+
+        if (type === 'Set Stock' || type === 'Set') {
+            finalStock = inputQty;
+            diffQty = finalStock - previousStock;
+        } else if (type === 'Restock') {
+            finalStock = previousStock + inputQty;
+            diffQty = inputQty;
+        } else {
+            finalStock = previousStock - inputQty;
+            diffQty = -inputQty;
+        }
 
         if (finalStock < 0) {
             return handleResponse(res, 400, "Stock cannot be negative");
         }
 
-        // 1. Update Product Stock
+        // 1. Update Product Master Stock and Sync Variants
         product.stock = finalStock;
+        if (Array.isArray(product.variants) && product.variants.length > 0) {
+            product.variants.forEach((v) => {
+                v.stock = finalStock;
+            });
+            product.markModified("variants");
+        }
         await product.save();
 
         // 2. Create History Entry
         const historyEntry = new StockHistory({
             product: productId,
             seller: sellerId,
-            type, // Restock, Correction
-            quantity: type === 'Restock' ? qtyChange : -qtyChange,
-            note: note || `Manual ${type} adjustment`
+            type: type || 'Correction',
+            quantity: diffQty,
+            note: note || `Manual ${type || 'Stock'} adjustment`
         });
 
         await historyEntry.save();
 
-        if (
-            type !== 'Restock' &&
-            qtyChange > 0 &&
-            await isLowStockAlertsEnabled()
-        ) {
+        // 3. Emit Low Stock Alert if stock dropped or set to low stock threshold
+        if (finalStock <= (product.lowStockAlert || 5) && (await isLowStockAlertsEnabled())) {
             const lowStockAlert = createLowStockAlertCandidate({
                 product,
                 previousStock,

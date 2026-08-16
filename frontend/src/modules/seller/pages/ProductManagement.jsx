@@ -32,7 +32,7 @@ import { sellerApi } from "../services/sellerApi";
 import { toast } from "sonner";
 import { compressImage } from "@/core/utils/imageCompression";
 import Pagination from "@shared/components/ui/Pagination";
-import { invalidateCache } from "@core/api/dedupe";
+import { clearAllCache, invalidateCache } from "@core/api/dedupe";
 
 const ProductManagement = () => {
   const navigate = useNavigate();
@@ -435,7 +435,11 @@ const ProductManagement = () => {
       }
 
       try {
+        clearAllCache();
         invalidateCache("/products");
+        invalidateCache("/categories");
+        invalidateCache("/offer-sections");
+        invalidateCache("/experience");
         sessionStorage.setItem("clear_home_cache", "true");
       } catch (err) {
         console.error("Cache invalidation failed:", err);

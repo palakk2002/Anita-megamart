@@ -101,9 +101,7 @@ const CategoryProductsPage = () => {
                 productParams.categoryId = catId;
             }
 
-            const prodRes = hasValidLocation
-                ? await customerApi.getProducts(productParams)
-                : { data: { success: true, result: { items: [] } } };
+            const prodRes = await customerApi.getProducts(productParams);
 
             if (prodRes.data.success) {
                 const rawResult = prodRes.data.result;
@@ -178,7 +176,7 @@ const CategoryProductsPage = () => {
     }, [safeProducts]);
 
     return (
-        <div className="flex flex-col min-h-screen bg-white max-w-md mx-auto relative font-sans">
+        <div className="flex flex-col min-h-screen bg-white w-full max-w-full md:max-w-7xl lg:max-w-[1440px] mx-auto relative font-sans">
             {/* Header */}
             <header className={cn(
                 "sticky top-0 z-50 bg-white border-b border-gray-50 px-4 py-4 flex items-center justify-between",
@@ -191,7 +189,7 @@ const CategoryProductsPage = () => {
                     >
                         <ChevronLeft size={24} className="text-gray-900" />
                     </button>
-                    <h1 className="text-[18px] font-bold text-gray-800 tracking-tight">
+                    <h1 className="text-[18px] md:text-xl font-bold text-gray-800 tracking-tight">
                         {category?.name || catId}
                     </h1>
                 </div>
@@ -249,7 +247,7 @@ const CategoryProductsPage = () => {
                         <aside 
                             ref={sidebarRef}
                             style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}
-                            className="w-[70px] border-r border-gray-50 flex flex-col bg-white overflow-y-auto hide-scrollbar sticky top-[60px] h-[calc(100vh-60px)] flex-shrink-0 touch-pan-y"
+                            className="w-[70px] md:w-[95px] lg:w-[110px] border-r border-gray-50 flex flex-col bg-white overflow-y-auto hide-scrollbar sticky top-[60px] h-[calc(100vh-60px)] flex-shrink-0 touch-pan-y"
                             data-lenis-prevent
                         >
                             <div className="flex flex-col w-full pb-12">
@@ -265,13 +263,13 @@ const CategoryProductsPage = () => {
                                         )}
                                     >
                                         <div className={cn(
-                                            "w-14 h-14 rounded-2xl flex items-center justify-center p-1.5 transition-all duration-300",
+                                            "w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center p-1.5 transition-all duration-300",
                                             selectedSubCategory === cat.id ? "scale-110" : "opacity-100"
                                         )}>
                                             <img src={applyCloudinaryTransform(cat.icon)} alt={cat.name} loading="lazy" className="w-full h-full object-contain" />
                                         </div>
                                         <span className={cn(
-                                            "text-[10px] text-center font-bold font-sans leading-tight px-1",
+                                            "text-[10px] md:text-[11px] text-center font-bold font-sans leading-tight px-1",
                                             selectedSubCategory === cat.id ? "text-primary" : "text-gray-600"
                                         )}>
                                             {cat.name}
@@ -284,8 +282,8 @@ const CategoryProductsPage = () => {
                         </aside>
 
                         {/* Content */}
-                        <main className="flex-1 p-2 pb-28 bg-white space-y-4 overflow-x-hidden min-h-[calc(100vh-60px)]">
-                            <div className="grid grid-cols-2 gap-x-2 gap-y-3">
+                        <main className="flex-1 p-2 sm:p-4 md:p-6 pb-28 bg-white space-y-4 overflow-x-hidden min-h-[calc(100vh-60px)]">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-4 md:gap-5">
                                 {filteredProducts.map((product) => (
                                     <ProductCard key={product.id} product={product} compact={true} />
                                 ))}

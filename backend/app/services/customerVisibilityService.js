@@ -31,7 +31,8 @@ function buildNearbySellersKey(lat, lng) {
 
 export async function getNearbySellerIdsForCustomer(lat, lng) {
   const fetchFn = async () => {
-    const sellers = await Seller.find({
+    // 1. Fetch sellers matching 2dsphere near query
+    const geoSellers = await Seller.find({
       isActive: true,
       location: {
         $near: {
@@ -46,7 +47,19 @@ export async function getNearbySellerIdsForCustomer(lat, lng) {
       .select("_id location serviceRadius")
       .lean();
 
-    return sellers
+    // 2. Fetch active approved sellers with default [0, 0] coordinates or missing location
+    const unassignedSellers = await Seller.find({
+      isActive: true,
+      $or: [
+        { "location.coordinates": [0, 0] },
+        { location: { $exists: false } },
+        { "location.coordinates": { $exists: false } },
+      ],
+    })
+      .select("_id")
+      .lean();
+
+    const matchedGeoIds = geoSellers
       .filter((seller) => {
         const coords = seller?.location?.coordinates;
         if (!Array.isArray(coords) || coords.length < 2) return false;
@@ -54,10 +67,26 @@ export async function getNearbySellerIdsForCustomer(lat, lng) {
         if (!Number.isFinite(sellerLat) || !Number.isFinite(sellerLng)) {
           return false;
         }
+        if (sellerLng === 0 && sellerLat === 0) return true;
         const distanceKm = calculateDistance(lat, lng, sellerLat, sellerLng);
-        return distanceKm <= (seller.serviceRadius || 5);
+        const effectiveRadius = Math.max(Number(seller.serviceRadius) || 25, 25);
+        return distanceKm <= effectiveRadius;
       })
       .map((seller) => String(seller._id));
+
+    const unassignedIds = unassignedSellers.map((seller) => String(seller._id));
+    const allIds = [...new Set([...matchedGeoIds, ...unassignedIds])];
+
+    if (allIds.length === 0) {
+      // Fallback: If no sellers matched specific radius, include all active approved sellers
+      const fallbackSellers = await Seller.find({
+        isActive: true,
+        applicationStatus: { $ne: "rejected" },
+      }).select("_id").lean();
+      return fallbackSellers.map((seller) => String(seller._id));
+    }
+
+    return allIds;
   };
 
   return getOrSet(buildNearbySellersKey(lat, lng), fetchFn, getTTL("nearbySellers"));

@@ -44,7 +44,7 @@ const StockManagement = () => {
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(20);
 
-    const fetchInventory = async (silent = false, stockStatus) => {
+    const fetchInventory = async (silent = false) => {
         if (!silent) setIsLoading(true);
         try {
             const requestLimit = 100;
@@ -55,8 +55,6 @@ const StockManagement = () => {
 
             while (requestedPage <= totalPages && requestedPage <= maxPages) {
                 const params = { page: requestedPage, limit: requestLimit };
-                if (stockStatus === 'in') params.stockStatus = 'in';
-                if (stockStatus === 'out') params.stockStatus = 'out';
 
                 const res = await sellerApi.getProducts(params);
                 if (!res.data.success) break;
@@ -78,17 +76,27 @@ const StockManagement = () => {
 
             const safeProducts = Array.isArray(collected) ? collected : [];
 
-            setInventory(
-                safeProducts.map(p => ({
-                    ...p,
-                    id: p._id,
-                    threshold: p.lowStockAlert || 5,
-                    status:
-                        p.stock === 0
-                            ? 'Out of Stock'
-                            : (p.stock <= (p.lowStockAlert || 5) ? 'Low Stock' : 'In Stock')
-                }))
-            );
+            const formatted = safeProducts.map(p => ({
+                ...p,
+                id: p._id,
+                threshold: p.lowStockAlert || 5,
+                status:
+                    p.stock === 0
+                        ? 'Out of Stock'
+                        : (p.stock <= (p.lowStockAlert || 5) ? 'Low Stock' : 'In Stock')
+            }));
+
+            setInventory(formatted);
+
+            if (!silent) {
+                const lowCount = formatted.filter(i => i.stock > 0 && i.stock <= i.threshold).length;
+                const outCount = formatted.filter(i => i.stock === 0).length;
+                if (lowCount > 0 || outCount > 0) {
+                    toast.warning(`Inventory Alert: ${lowCount} item(s) in Low Stock, ${outCount} item(s) Out of Stock!`, {
+                        id: 'inventory-stock-alert',
+                    });
+                }
+            }
         } catch (error) {
             toast.error("Failed to load inventory");
         } finally {
@@ -112,15 +120,11 @@ const StockManagement = () => {
 
     useEffect(() => {
         if (activeView === 'inventory') {
-            let stockStatusParam;
-            if (filterStatus === 'In Stock') stockStatusParam = 'in';
-            else if (filterStatus === 'Out of Stock') stockStatusParam = 'out';
-            else stockStatusParam = undefined; // All / Low Stock -> no backend filter
-            fetchInventory(false, stockStatusParam);
+            fetchInventory(false);
         } else {
             fetchHistory();
         }
-    }, [activeView, filterStatus]);
+    }, [activeView]);
 
     const stats = useMemo(() => [
         { label: 'Total Inventory', value: inventory.reduce((acc, item) => acc + item.stock, 0), icon: HiOutlineCube, color: 'text-brand-600', bg: 'bg-brand-50', status: 'All' },
@@ -142,7 +146,7 @@ const StockManagement = () => {
 
     const handleFullAdjustment = async () => {
         const value = parseInt(adjustValue);
-        if (isNaN(value) || value <= 0) {
+        if (isNaN(value) || value < 0) {
             toast.error("Please enter a valid quantity");
             return;
         }
@@ -150,8 +154,8 @@ const StockManagement = () => {
         try {
             const res = await sellerApi.adjustStock({
                 productId: selectedItem.id,
-                type: adjustType === 'Restock' ? 'Restock' : 'Correction',
-                quantity: adjustType === 'Restock' ? value : -value,
+                type: adjustType,
+                quantity: value,
                 note: adjustNote
             });
 
@@ -167,7 +171,8 @@ const StockManagement = () => {
 
     const openAdjustModal = (item) => {
         setSelectedItem(item);
-        setAdjustValue('');
+        setAdjustType('Set Stock');
+        setAdjustValue(String(item.stock ?? 0));
         setAdjustNote('');
         setIsAdjustModalOpen(true);
     };
@@ -236,7 +241,7 @@ const StockManagement = () => {
                                         />
                                     </div>
                                     <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 shadow-sm">
-                                        {['All', 'In Stock', 'Out of Stock'].map((status) => (
+                                        {['All', 'In Stock', 'Low Stock', 'Out of Stock'].map((status) => (
                                             <button
                                                 key={status}
                                                 onClick={() => {
@@ -321,18 +326,22 @@ const StockManagement = () => {
                                                             </td>
                                                             <td className="px-6 py-5">
                                                                 <div className="flex items-center gap-2">
-                                                                    <div className="flex flex-col">
-                                                                        <span
+                                                                    <div className="flex flex-col">                                                                         <span
                                                                             className={cn(
                                                                                 "text-sm font-black",
-                                                                                item.stock <= item.threshold ? "text-rose-600" : "text-slate-900"
+                                                                                item.stock === 0 ? "text-rose-600" : item.stock <= item.threshold ? "text-amber-600" : "text-slate-900"
                                                                             )}
                                                                         >
                                                                             {item.stock} units
                                                                         </span>
-                                                                        {item.stock <= item.threshold && (
-                                                                            <span className="text-[9px] font-bold text-rose-500 bg-rose-50 px-1.5 py-0.5 rounded w-fit mt-0.5">
+                                                                        {item.stock > 0 && item.stock <= item.threshold && (
+                                                                            <span className="text-[9px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded w-fit mt-0.5">
                                                                                 Low Stock
+                                                                            </span>
+                                                                        )}
+                                                                        {item.stock === 0 && (
+                                                                            <span className="text-[9px] font-bold text-rose-600 bg-rose-100 px-1.5 py-0.5 rounded w-fit mt-0.5">
+                                                                                Out of Stock
                                                                             </span>
                                                                         )}
                                                                     </div>
@@ -340,8 +349,11 @@ const StockManagement = () => {
                                                             </td>
                                                             <td className="px-6 py-5">
                                                                 <Badge
-                                                                    variant={item.status === 'In Stock' ? 'success' : 'destructive'}
-                                                                    className="text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg"
+                                                                    variant={item.status === 'In Stock' ? 'success' : item.status === 'Low Stock' ? 'warning' : 'destructive'}
+                                                                    className={cn(
+                                                                        "text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg",
+                                                                        item.status === 'Low Stock' && "bg-amber-100 text-amber-800 border-amber-200 shadow-none"
+                                                                    )}
                                                                 >
                                                                     {item.status}
                                                                 </Badge>
@@ -400,10 +412,12 @@ const StockManagement = () => {
                                     <div className="flex items-center gap-5">
                                         <div className={cn(
                                             "h-12 w-12 rounded-2xl flex items-center justify-center shadow-sm",
-                                            log.type === 'Restock' ? "bg-brand-50 text-brand-600" :
-                                                log.type === 'Sale' ? "bg-brand-50 text-brand-600" : "bg-rose-50 text-rose-600"
+                                            log.type === 'Restock' ? "bg-emerald-50 text-emerald-600" :
+                                                log.type === 'Set Stock' ? "bg-brand-50 text-brand-600" :
+                                                log.type === 'Sale' ? "bg-blue-50 text-blue-600" : "bg-rose-50 text-rose-600"
                                         )}>
                                             {log.type === 'Restock' ? <HiOutlinePlus className="h-6 w-6" /> :
+                                                log.type === 'Set Stock' ? <HiOutlineArrowsUpDown className="h-6 w-6" /> :
                                                 log.type === 'Sale' ? <HiOutlineCube className="h-6 w-6" /> : <HiOutlineMinus className="h-6 w-6" />}
                                         </div>
                                         <div>
@@ -411,8 +425,9 @@ const StockManagement = () => {
                                                 <h4 className="text-sm font-black text-slate-900">{log.product?.name || 'Unknown Product'}</h4>
                                                 <Badge className={cn(
                                                     "text-[9px] font-bold px-1.5 py-0",
-                                                    log.type === 'Restock' ? "bg-brand-100 text-brand-700" :
-                                                        log.type === 'Sale' ? "bg-brand-100 text-brand-700" : "bg-rose-100 text-rose-700"
+                                                    log.type === 'Restock' ? "bg-emerald-100 text-emerald-700" :
+                                                        log.type === 'Set Stock' ? "bg-brand-100 text-brand-700" :
+                                                        log.type === 'Sale' ? "bg-blue-100 text-blue-700" : "bg-rose-100 text-rose-700"
                                                 )}>
                                                     {log.type.toUpperCase()}
                                                 </Badge>
@@ -486,12 +501,12 @@ const StockManagement = () => {
 
                                 <div className="space-y-4">
                                     <div className="flex p-1 bg-slate-100 rounded-2xl border border-slate-200">
-                                        {['Restock', 'Remove'].map((type) => (
+                                        {['Set Stock', 'Restock', 'Remove'].map((type) => (
                                             <button
                                                 key={type}
                                                 onClick={() => setAdjustType(type)}
                                                 className={cn(
-                                                    "flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
+                                                    "flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
                                                     adjustType === type
                                                         ? "bg-white text-slate-900 shadow-md"
                                                         : "text-slate-600 hover:text-slate-600"
@@ -503,7 +518,9 @@ const StockManagement = () => {
                                     </div>
 
                                     <div className="space-y-1.5">
-                                        <label className="text-xs font-black text-slate-600 uppercase tracking-widest ml-1">Quantity Change</label>
+                                        <label className="text-xs font-black text-slate-600 uppercase tracking-widest ml-1">
+                                            {adjustType === 'Set Stock' ? 'New Exact Stock Quantity' : 'Quantity Change'}
+                                        </label>
                                         <div className="relative group">
                                             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-black text-slate-600">#</div>
                                             <input
