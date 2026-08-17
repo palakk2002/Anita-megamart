@@ -61,48 +61,99 @@ const CategoryProductsPage = () => {
             .catch(() => {});
     }, []);
 
+    // Version & mount diagnostic logging
+    useEffect(() => {
+        console.log("[CategoryProductsPage] Component mounted - v1.0.2 diagnostics active");
+    }, []);
+
+    // Safety fallback timeout to prevent infinite loading state if APIs/geolocation hang
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (isLoading) {
+                console.warn("[CategoryProductsPage] Safety timeout fired (7s)! Forcing isLoading to false");
+                setIsLoading(false);
+            }
+        }, 7000);
+        return () => clearTimeout(timer);
+    }, [isLoading]);
+
+    const requestSeqRef = React.useRef(0);
+
     const fetchData = async () => {
+        const seq = ++requestSeqRef.current;
         setIsLoading(true);
+        console.log(`[CategoryProductsPage] fetchData [seq=${seq}] started. Coordinates:`, currentLocation?.latitude, currentLocation?.longitude, "CatId:", catId);
         try {
             const hasValidLocation =
                 Number.isFinite(currentLocation?.latitude) &&
                 Number.isFinite(currentLocation?.longitude);
 
             const catRes = await customerApi.getCategories({ tree: true });
-            let isHeader = false;
+            console.log(`[CategoryProductsPage] fetchData [seq=${seq}] categories API success:`, catRes.data?.success);
+            if (seq !== requestSeqRef.current) {
+                console.log(`[CategoryProductsPage] fetchData [seq=${seq}] aborted (stale request)`);
+                return;
+            }
+
+            let categoryType = null;
             let currentCat = null;
 
             if (catRes.data.success) {
                 const tree = catRes.data.results || catRes.data.result || [];
+                console.log(`[CategoryProductsPage] fetchData [seq=${seq}] total tree headers:`, tree.length);
                 const headerMatch = tree.find(h => h._id === catId);
                 if (headerMatch) {
-                    isHeader = true;
+                    categoryType = 'header';
                     currentCat = headerMatch;
                 } else {
                     for (const header of tree) {
                         const found = (header.children || []).find(c => c._id === catId);
                         if (found) {
+                            categoryType = 'category';
                             currentCat = found;
                             break;
+                        } else {
+                            for (const cat of (header.children || [])) {
+                                const subMatch = (cat.children || []).find(s => s._id === catId);
+                                if (subMatch) {
+                                    categoryType = 'subcategory';
+                                    currentCat = {
+                                        ...subMatch,
+                                        siblings: cat.children || []
+                                    };
+                                    break;
+                                }
+                            }
+                            if (currentCat) break;
                         }
                     }
                 }
             }
 
-            setIsHeaderCategory(isHeader);
+            console.log(`[CategoryProductsPage] fetchData [seq=${seq}] matched Category:`, currentCat?.name, "Type:", categoryType);
+
+            setIsHeaderCategory(categoryType === 'header');
 
             const productParams = {
                 lat: currentLocation?.latitude,
                 lng: currentLocation?.longitude,
                 limit: 1000,
             };
-            if (isHeader) {
+            if (categoryType === 'header') {
                 productParams.headerId = catId;
+            } else if (categoryType === 'subcategory') {
+                productParams.subcategoryId = catId;
             } else {
                 productParams.categoryId = catId;
             }
 
+            console.log(`[CategoryProductsPage] fetchData [seq=${seq}] requesting products with params:`, productParams);
             const prodRes = await customerApi.getProducts(productParams);
+            console.log(`[CategoryProductsPage] fetchData [seq=${seq}] products API success:`, prodRes.data?.success);
+            if (seq !== requestSeqRef.current) {
+                console.log(`[CategoryProductsPage] fetchData [seq=${seq}] aborted (stale request)`);
+                return;
+            }
 
             if (prodRes.data.success) {
                 const rawResult = prodRes.data.result;
@@ -113,6 +164,8 @@ const CategoryProductsPage = () => {
                     : Array.isArray(rawResult)
                     ? rawResult
                     : [];
+
+                console.log(`[CategoryProductsPage] fetchData [seq=${seq}] retrieved products count:`, dbProds.length);
 
                 const isOutOfServiceMsg = 
                     prodRes.data.message === "No sellers found in your area" || 
@@ -138,7 +191,8 @@ const CategoryProductsPage = () => {
 
             if (currentCat) {
                 setCategory(currentCat);
-                const subs = (currentCat.children || []).map(s => ({
+                const childrenToMap = categoryType === 'subcategory' ? (currentCat.siblings || []) : (currentCat.children || []);
+                const subs = childrenToMap.map(s => ({
                     id: s._id,
                     name: s.name,
                     icon: s.image || 'https://cdn-icons-png.flaticon.com/128/2321/2321801.png'
@@ -146,9 +200,13 @@ const CategoryProductsPage = () => {
                 setSubCategories([{ id: 'all', name: 'All', icon: 'https://cdn-icons-png.flaticon.com/128/2321/2321831.png' }, ...subs]);
             }
         } catch (error) {
-            console.error("Error fetching category data:", error);
+            if (seq !== requestSeqRef.current) return;
+            console.error(`[CategoryProductsPage] fetchData [seq=${seq}] error:`, error);
         } finally {
-            setIsLoading(false);
+            if (seq === requestSeqRef.current) {
+                setIsLoading(false);
+                console.log(`[CategoryProductsPage] fetchData [seq=${seq}] completed. isLoading set to false`);
+            }
         }
     };
 
