@@ -94,6 +94,7 @@ const CategoryProductsPage = () => {
             const productParams = {
                 lat: currentLocation?.latitude,
                 lng: currentLocation?.longitude,
+                limit: 1000,
             };
             if (isHeader) {
                 productParams.headerId = catId;

@@ -339,7 +339,7 @@ export const getProducts = async (req, res) => {
 
     const { page, limit, skip } = getPagination(req, {
       defaultLimit: 24,
-      maxLimit: 100,
+      maxLimit: 1000,
     });
 
     const sortMap = {
