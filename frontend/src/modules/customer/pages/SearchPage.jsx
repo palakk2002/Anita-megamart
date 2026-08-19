@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useLocation as useRouterLocation } from 'react-router-dom';
-import { Search, Mic, ArrowLeft, X, TrendingUp, ChevronRight, History } from 'lucide-react';
+import { useNavigate, useLocation as useRouterLocation, Link } from 'react-router-dom';
+import { Search, Mic, ArrowLeft, X, TrendingUp, ChevronRight, History, ShoppingCart } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { customerApi } from '../services/customerApi';
 import ProductCard from '../components/shared/ProductCard';
@@ -8,6 +8,7 @@ import { useProductDetail } from '../context/ProductDetailContext';
 import { useSettings } from '@core/context/SettingsContext';
 import { cn } from '@/lib/utils';
 import { useLocation as useAppLocation } from '../context/LocationContext';
+import { useCart } from '../context/CartContext';
 import { getJSON, setJSON, STORAGE_KEYS } from '@core/utils/storage';
 import Lottie from 'lottie-react';
 
@@ -17,6 +18,7 @@ const SearchPage = () => {
     const { isOpen: isProductDetailOpen } = useProductDetail();
     const { settings } = useSettings();
     const { currentLocation } = useAppLocation();
+    const { cartCount } = useCart();
     const appName = settings?.appName || 'App';
 
     // Get initial query from URL state or params
@@ -233,54 +235,90 @@ const SearchPage = () => {
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl pointer-events-none" />
                 <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full -ml-12 -mb-12 blur-xl pointer-events-none" />
 
-                <div className="px-4 pt-5 pb-6 flex items-center md:justify-center gap-3 relative z-10">
+                <div className="px-4 pt-5 pb-6 flex items-center justify-between gap-3 relative z-10 w-full max-w-7xl mx-auto">
+                    {/* Left Section: Back button on mobile, Logo on desktop */}
+                    <div className="flex items-center gap-3 md:gap-4 md:-ml-2">
                         <button
                             onClick={() => navigate(-1)}
-                            className="flex items-center justify-center w-12 h-12 bg-white/20 hover:bg-white/30 rounded-full text-white backdrop-blur-md border border-white/10 transition-all flex-shrink-0 shadow-sm active:scale-90"
+                            className="flex items-center justify-center w-12 h-12 md:w-9 md:h-9 bg-white/20 hover:bg-white/30 rounded-full text-white backdrop-blur-md border border-white/10 transition-all flex-shrink-0 shadow-sm active:scale-90"
                         >
-                            <ArrowLeft size={22} strokeWidth={2.5} />
+                            <ArrowLeft className="w-[22px] h-[22px] md:w-5 md:h-5" strokeWidth={2.5} />
                         </button>
+                        
+                        <Link to="/" className="hidden md:flex items-center">
+                            {settings?.logoUrl ? (
+                                <img 
+                                    src={settings.logoUrl} 
+                                    alt={appName} 
+                                    className="h-10 md:h-14 w-auto object-contain" 
+                                />
+                            ) : (
+                                <span className="text-2xl md:text-4xl font-black tracking-tight text-white">
+                                    {appName}
+                                </span>
+                            )}
+                        </Link>
+                    </div>
 
-                        <div className="flex-1 relative md:flex-none md:w-[500px] lg:w-[600px]">
-                            <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10">
-                                <Search size={18} strokeWidth={3} className="text-slate-400" />
-                            </div>
-                            <input
-                                autoFocus
-                                type="text"
-                                placeholder='Search items, categories...'
-                                value={query}
-                                onKeyDown={handleKeyDown}
-                                onChange={(e) => setQuery(e.target.value)}
-                                className="w-full h-12 bg-white rounded-2xl pl-11 pr-14 shadow-xl shadow-black/10 border-none outline-none text-slate-800 font-bold placeholder:text-slate-400 placeholder:font-medium focus:ring-4 focus:ring-white/20 transition-all"
-                            />
-                            
-                            {/* Integrated Actions inside Search Input */}
-                            <div className="absolute right-2 top-1/2 -translate-y-1/2 z-20 flex items-center gap-1">
-                                {query && (
-                                    <button
-                                        onClick={handleClear}
-                                        className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors"
-                                    >
-                                        <X size={12} strokeWidth={3} className="text-slate-600" />
-                                    </button>
-                                )}
-                                <div className="w-[1px] h-6 bg-slate-100 mx-1" />
-                                <button 
-                                    onClick={handleVoiceSearch}
-                                    className={cn(
-                                        "p-2 transition-all rounded-full relative",
-                                        isListening ? "text-red-500 bg-red-50 scale-110" : "text-slate-400 hover:text-primary hover:bg-slate-50"
-                                    )}
+                    {/* Middle Section: Search Input */}
+                    <div className="flex-1 relative md:flex-none md:w-[500px] lg:w-[600px] md:mx-auto">
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10">
+                            <Search size={18} strokeWidth={3} className="text-slate-400" />
+                        </div>
+                        <input
+                            autoFocus
+                            type="text"
+                            placeholder='Search items, categories...'
+                            value={query}
+                            onKeyDown={handleKeyDown}
+                            onChange={(e) => setQuery(e.target.value)}
+                            className="w-full h-12 bg-white rounded-2xl pl-11 pr-14 shadow-xl shadow-black/10 border-none outline-none text-slate-800 font-bold placeholder:text-slate-400 placeholder:font-medium focus:ring-4 focus:ring-white/20 transition-all"
+                        />
+                        
+                        {/* Integrated Actions inside Search Input */}
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 z-20 flex items-center gap-1">
+                            {query && (
+                                <button
+                                    onClick={handleClear}
+                                    className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors"
                                 >
-                                    <Mic size={20} strokeWidth={2.5} className={cn(isListening && "animate-pulse")} />
-                                    {isListening && (
-                                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping" />
-                                    )}
+                                    <X size={12} strokeWidth={3} className="text-slate-600" />
                                 </button>
-                            </div>
+                            )}
+                            <div className="w-[1px] h-6 bg-slate-100 mx-1" />
+                            <button 
+                                onClick={handleVoiceSearch}
+                                className={cn(
+                                    "p-2 transition-all rounded-full relative",
+                                    isListening ? "text-red-500 bg-red-50 scale-110" : "text-slate-400 hover:text-primary hover:bg-slate-50"
+                                )}
+                            >
+                                <Mic size={20} strokeWidth={2.5} className={cn(isListening && "animate-pulse")} />
+                                {isListening && (
+                                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping" />
+                                )}
+                            </button>
                         </div>
                     </div>
+
+                    {/* Right Section: My Cart Button (Desktop only) */}
+                    <div className="hidden md:flex items-center gap-4">
+                        <Link 
+                            to="/checkout" 
+                            className="flex items-center gap-2 px-4 py-2.5 bg-white/20 hover:bg-white/30 text-white font-black rounded-xl border border-white/10 backdrop-blur-md transition-all shadow-sm active:scale-95 group"
+                        >
+                            <div className="relative">
+                                <ShoppingCart size={18} strokeWidth={2.5} />
+                                {cartCount > 0 && (
+                                    <span className="absolute -top-2 -right-2 h-4 w-4 rounded-full bg-red-500 text-[8px] font-bold text-white flex items-center justify-center border border-white animate-in zoom-in duration-300">
+                                        {cartCount}
+                                    </span>
+                                )}
+                            </div>
+                            <span>My Cart</span>
+                        </Link>
+                    </div>
+                </div>
                 </div>
 
                 <div className="p-5 space-y-10 pb-24">

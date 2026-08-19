@@ -334,7 +334,7 @@ const ProductCard = React.memo(
                 <div
                   className={cn(
                     "flex items-center bg-white border-[1.5px] border-primary rounded-lg p-0.5 justify-between",
-                    compact ? "min-w-[60px]" : "min-w-[68px] sm:min-w-[90px] md:min-w-[100px]",
+                    compact ? "min-w-[60px]" : "min-w-[68px] sm:min-w-[90px] md:min-w-[80px]",
                   )}>
                   <button
                     onClick={handleDecrement}
@@ -344,7 +344,7 @@ const ProductCard = React.memo(
                   <span
                     className={cn(
                       "font-black text-primary",
-                      compact ? "text-[10px]" : "text-[11px] sm:text-[13px] md:text-sm",
+                      compact ? "text-[10px]" : "text-[11px] sm:text-[13px] md:text-xs",
                     )}>
                     {quantity}
                   </span>
@@ -361,7 +361,7 @@ const ProductCard = React.memo(
                     "bg-primary border-[1.5px] border-primary text-white rounded-lg font-black shadow-sm hover:bg-primary/90 transition-all uppercase tracking-wide leading-none active:scale-95",
                     compact
                       ? "px-2.5 py-1 text-[10px]"
-                      : "px-3.5 py-1.5 text-[11px] sm:px-7 sm:py-2 sm:text-[13px] md:text-sm md:px-8 md:py-2.5",
+                      : "px-3.5 py-1.5 text-[11px] sm:px-7 sm:py-2 sm:text-[13px] md:text-xs md:px-5 md:py-1.5",
                   )}>
                   ADD
                 </button>

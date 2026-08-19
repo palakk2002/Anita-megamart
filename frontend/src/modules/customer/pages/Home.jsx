@@ -169,17 +169,28 @@ const getHomePageDataCacheKey = (location) => {
 const getCachedHomePageData = (location) =>
   homePageDataCache.get(getHomePageDataCacheKey(location)) || null;
 
-const DB_HEADER_COLORS = {
-  "All": "#37a72f",
-  "Fresh Vegetables": "#16a34a",
-  "Electronic": "#7c3aed",
-  "50% Off": "#dc2626",
-  "School Time": "#2563eb",
-  "Kids": "#06b6d4",
-  "Home": "#d97706",
-  "Beauty": "#db2777",
-  "Fashion": "#e11d48",
-  "Grocery": "#ea580c"
+const DB_HEADER_THEMES = {
+  "all": { bg: "#37a72f", text: "#111111", icon: "#111111" },
+  "dairy & breakfast": { bg: "#ea580c", text: "#111111", icon: "#111111" },
+  "vegetables & fruits": { bg: "#16a34a", text: "#111111", icon: "#111111" },
+  "cold drinks & juices": { bg: "#0284c7", text: "#111111", icon: "#111111" },
+  "snacks & munchies": { bg: "#7c3aed", text: "#ffffff", icon: "#ffffff" },
+  "snacks &munchies": { bg: "#7c3aed", text: "#ffffff", icon: "#ffffff" },
+  "breakfast & instant & frozen food": { bg: "#0d9488", text: "#111111", icon: "#111111" },
+  "sweet tooth": { bg: "#db2777", text: "#ffffff", icon: "#ffffff" },
+  "bakery & biscuits": { bg: "#ca8a04", text: "#111111", icon: "#111111" },
+  "tea, coffee & milk drinks": { bg: "#6d28d9", text: "#ffffff", icon: "#ffffff" },
+  "atta, rice & dal": { bg: "#b45309", text: "#ffffff", icon: "#ffffff" },
+  "tootu fruity": { bg: "#e11d48", text: "#ffffff", icon: "#ffffff" },
+  "fresh vegetables": { bg: "#16a34a", text: "#111111", icon: "#111111" },
+  "electronic": { bg: "#7c3aed", text: "#ffffff", icon: "#ffffff" },
+  "50% off": { bg: "#dc2626", text: "#ffffff", icon: "#ffffff" },
+  "school time": { bg: "#2563eb", text: "#ffffff", icon: "#ffffff" },
+  "kids": { bg: "#06b6d4", text: "#111111", icon: "#111111" },
+  "home": { bg: "#d97706", text: "#ffffff", icon: "#ffffff" },
+  "beauty": { bg: "#db2777", text: "#ffffff", icon: "#ffffff" },
+  "fashion": { bg: "#e11d48", text: "#ffffff", icon: "#ffffff" },
+  "grocery": { bg: "#ea580c", text: "#111111", icon: "#111111" }
 };
 
 const Home = () => {
@@ -307,10 +318,11 @@ const Home = () => {
         nextHomeData.subcategoryMap = subMap;
         const formattedHeaders = dbCats.filter((cat) => cat.type === "header").map((cat) => {
           const catName = cat.name;
+          const key = catName.trim().toLowerCase();
+          const theme = DB_HEADER_THEMES[key] || { bg: cat.headerColor || "#FF1E1E", text: cat.headerFontColor || "#111111", icon: cat.headerIconColor || "#111111" };
           const meta = CATEGORY_METADATA[catName] || CATEGORY_METADATA[catName.toUpperCase()] || { icon: Sparkles, theme: DEFAULT_CATEGORY_THEME, banner: { title: catName.toUpperCase(), subtitle: "TOP PICKS", floatingElements: "sparkles" } };
           const IconComp = (cat.iconId && ICON_COMPONENTS[cat.iconId]) || meta.icon || Sparkles;
-          const customColor = DB_HEADER_COLORS[catName] || cat.headerColor || "#FF1E1E";
-          return { ...cat, id: cat._id, headerColor: customColor, icon: IconComp, theme: meta.theme, banner: { ...meta.banner, textColor: "text-white" } };
+          return { ...cat, id: cat._id, headerColor: theme.bg, headerFontColor: theme.text, headerIconColor: theme.icon, icon: IconComp, theme: meta.theme, banner: { ...meta.banner, textColor: "text-white" } };
         });
         nextHomeData.formattedHeaders = formattedHeaders;
         const allHeaderFromAdmin = formattedHeaders.find((h) => (h.slug?.toLowerCase() === "all") || (h.name?.toLowerCase() === "all"));
@@ -455,7 +467,7 @@ const Home = () => {
   };
 
   return (
-    <div className={`min-h-screen pt-[190px] md:pt-[250px] ${products.length === 0 && !isLoading ? "bg-white" : "bg-[#F5F7F8]"}`}>
+    <div className={`min-h-screen pt-[190px] md:pt-[175px] ${products.length === 0 && !isLoading ? "bg-white" : "bg-[#F5F7F8]"}`}>
       <div className={cn("contents", isProductDetailOpen && "hidden md:contents")}>
         <MainLocationHeader categories={categories} activeCategory={activeCategory} onCategorySelect={setActiveCategory} />
       </div>

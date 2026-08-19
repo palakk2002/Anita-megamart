@@ -231,13 +231,13 @@ const CustomerAuth = () => {
             <div className="w-full sm:w-[92%] max-w-[400px] h-[100dvh] sm:h-[85vh] sm:max-h-[780px] bg-white relative z-10 overflow-hidden sm:rounded-[40px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] border border-white/40 flex flex-col transition-colors duration-1000">
 
                 {/* Scrollable Content Container */}
-                <div className="h-full overflow-y-auto no-scrollbar pb-20">
+                <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pb-20">
 
                     {/* Header: Immersive Category Visuals */}
                     <motion.div
                         animate={{ backgroundColor: activeCategory.theme }}
                         transition={{ duration: 1 }}
-                        className="relative h-[240px] shrink-0 w-full overflow-hidden"
+                        className="relative h-[240px] sm:h-[180px] shrink-0 w-full overflow-hidden"
                     >
                         <AnimatePresence mode="wait">
                             <motion.div
@@ -269,7 +269,7 @@ const CustomerAuth = () => {
                         </div>
 
                         {/* Centered App Message */}
-                        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8 text-white pt-10">
+                        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8 text-white pt-10 sm:pt-6">
                             <motion.h2
                                 key={carouselIndex}
                                 initial={{ opacity: 0, y: 10 }}
@@ -283,7 +283,7 @@ const CustomerAuth = () => {
 
                         {/* S-Curve Divider */}
                         <div className="absolute -bottom-1 left-0 w-full leading-[0]">
-                            <svg viewBox="0 0 1440 320" preserveAspectRatio="none" className="w-full h-24">
+                            <svg viewBox="0 0 1440 320" preserveAspectRatio="none" className="w-full h-24 sm:h-16">
                                 <path
                                     fill="#ffffff"
                                     d="M0,224L40,213.3C80,203,160,181,240,186.7C320,192,400,224,480,240C560,256,640,256,720,234.7C800,213,880,171,960,165.3C1040,160,1120,192,1200,208C1280,224,1360,224,1400,224L1440,224L1440,320L1400,320C1360,320,1280,320,1200,320C1120,320,1040,320,960,320C880,320,800,320,720,320C640,320,560,320,480,320C400,320,320,320,240,320C160,320,80,320,40,320L0,320Z"
@@ -323,7 +323,7 @@ const CustomerAuth = () => {
 
 
                     {/* Authentication Form Block */}
-                    <div className="px-6 pt-6 pb-10">
+                    <div className="px-6 pt-6 pb-10 sm:pt-4 sm:pb-6">
                         <AnimatePresence mode="wait">
                             {!showOtp ? (
                                 <motion.div
@@ -331,7 +331,7 @@ const CustomerAuth = () => {
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, x: -20 }}
-                                    className="space-y-5"
+                                    className="space-y-5 sm:space-y-4"
                                 >
                                     {/* App Style Tab Switcher */}
                                     <div className="flex bg-gray-50 rounded-2xl p-1.5 border border-gray-100">
@@ -360,7 +360,7 @@ const CustomerAuth = () => {
                                         </p>
                                     </div>
 
-                                    <form onSubmit={handleSendOtp} className="space-y-4">
+                                    <form onSubmit={handleSendOtp} className="space-y-4 sm:space-y-3">
                                         {!isLogin && (
                                             <div className="relative group">
                                                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 transition-colors" style={{ color: 'inherit' }}>
@@ -371,7 +371,7 @@ const CustomerAuth = () => {
                                                     name="name"
                                                     value={formData.name}
                                                     placeholder="Full Name"
-                                                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold text-gray-800 outline-none focus:bg-white transition-all"
+                                                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-12 pr-4 py-4 sm:py-3 text-sm font-bold text-gray-800 outline-none focus:bg-white transition-all"
                                                     style={{ '--theme-color': activeCategory.theme }}
                                                     onChange={(e) => setFormData({ ...formData, name: e.target.value.replace(/[^a-zA-Z\s]/g, '') })}
                                                     onFocus={(e) => e.target.style.borderColor = activeCategory.theme}
@@ -392,7 +392,7 @@ const CustomerAuth = () => {
                                                 maxLength={10}
                                                 value={formData.phone}
                                                 placeholder="Mobile Number"
-                                                className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-20 pr-4 py-4 text-sm font-bold text-gray-800 outline-none focus:bg-white transition-all"
+                                                className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-20 pr-4 py-4 sm:py-3 text-sm font-bold text-gray-800 outline-none focus:bg-white transition-all"
                                                 onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '').replace(/^[^6-9]+/, '') })}
                                                 onFocus={(e) => e.target.style.borderColor = activeCategory.theme}
                                                 onBlur={(e) => e.target.style.borderColor = '#F3F4F6'}
@@ -402,7 +402,7 @@ const CustomerAuth = () => {
                                         <button
                                             type="submit"
                                             disabled={isLoading}
-                                            className="w-full text-white py-5 rounded-[24px] text-xs font-black tracking-[4px] flex items-center justify-center gap-3 active:scale-95 transition-all uppercase"
+                                            className="w-full text-white py-5 sm:py-3.5 rounded-[24px] text-xs font-black tracking-[4px] flex items-center justify-center gap-3 active:scale-95 transition-all uppercase"
                                             style={{ backgroundColor: activeCategory.theme, boxShadow: `0 20px 40px ${activeCategory.shadow}` }}
                                         >
                                             {isLoading ? 'Verifying...' : 'Continue'}
